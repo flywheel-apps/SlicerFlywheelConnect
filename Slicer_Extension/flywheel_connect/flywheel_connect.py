@@ -16,7 +16,7 @@ class flywheel_connect(ScriptedLoadableModule):
   def __init__(self, parent):
     try:
       import flywheel
-    except Exception e:
+    except Exception:
       from pip._internal import main as pipmain
       pipmain(["install","flywheel-sdk"])
       import flywheel
