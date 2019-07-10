@@ -16,7 +16,7 @@ class flywheel_connect(ScriptedLoadableModule):
   def __init__(self, parent):
     try:
       import flywheel
-    except Exception e:
+    except Exception:
       from pip._internal import main as pipmain
       pipmain(["install","flywheel-sdk"])
       import flywheel
@@ -46,8 +46,10 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
   """
 
   def setup(self):
+    import flywheel
     ScriptedLoadableModuleWidget.setup(self)
-    self.CacheDir='/Users/joshuajacobs/flywheelIO/' #TODO: Make an EditLine for this.... 
+    self.CacheDir=os.path.expanduser('~') + '/flywheelIO/'
+
     # Give a line_edit and label for the API key
     self.apiKeyCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.apiKeyCollapsibleGroupBox.setTitle('API Key Entry')
@@ -66,6 +68,14 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     self.connectAPIButton.enabled = False
     apiKeyFormLayout.addWidget(self.connectAPIButton)
 
+    #
+    # CacheDir Text Box
+    #
+    self.cacheDirTextLabel = qt.QLabel('Disk Cache:')
+    apiKeyFormLayout.addWidget(self.cacheDirTextLabel)
+    self.cacheDirTexBox =qt.QLineEdit()
+    self.cacheDirTexBox.setText(self.CacheDir)
+    apiKeyFormLayout.addWidget(self.cacheDirTexBox)    
 
     self.groupsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.groupsCollapsibleGroupBox.setTitle('groups')
@@ -87,10 +97,10 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     #
     # Use Cache CheckBox
     #
-    self.useCacheCeckBox = qt.QCheckBox("Cache server responses")
+    self.useCacheCeckBox = qt.QCheckBox("Cache Images")
     self.useCacheCeckBox.toolTip = '''For faster browsing if this box is checked\
     the browser will cache server responses and on further calls\
-    would populate tables based on saved data on disk.'''
+    would load images based on saved data on disk.'''
 
     groupsFormLayout.addWidget(self.useCacheCeckBox)
     self.useCacheCeckBox.setCheckState(True)
@@ -198,6 +208,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
   def onConnectAPIPushed(self):
     # Instantiate and connect widgets ...
+    import flywheel
     self.fw = flywheel.Client(self.apiKeyTexBox.text)
     #if client valid: TODO
     groups=self.fw.groups()
@@ -236,11 +247,28 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     
 
   def onAcquisitionPushed(self):
-    self.acquisition.download_file(self.acquisition.files[0].name,self.CacheDir+ '/' + self.acquisition.files[0].name)
-    if 'seg' in self.acquisition.files[0].name:
-    	slicer.util.loadLabelVolume(self.CacheDir + '/' + self.acquisition.files[0].name)
-    else:
-    	slicer.util.loadVolume(self.CacheDir + '/' + self.acquisition.files[0].name)
+    #Create the save Path:
+    acq_Dir=os.path.join(self.CacheDir,self.group.id,self.project.id,self.session.id,self.acquisition.id)
+    try:
+      if not os.path.exists(acq_Dir):
+        os.makedirs(acq_Dir)
+    except Exception as e:
+      print("Fail!",e)
+    #for each file in the acquisitions files
+    for fl in self.acquisition.files:
+      #If the file does not exist AND is nifti (nii.gz) then load into cache
+      #TODO: A little clunky down there... but can clean up later....
+      if not os.path.exists(acq_Dir+'/'+fl.name) and ('nii.gz' in fl.name):
+        self.acquisition.download_file(fl.name,acq_Dir + '/' + fl.name)
+        if 'seg' in fl.name:
+          slicer.util.loadLabelVolume(acq_Dir + '/' + fl.name)
+        else:
+          slicer.util.loadVolume(acq_Dir + '/' + fl.name)
+      elif ('nii.gz' in fl.name):
+        if 'seg' in fl.name:
+          slicer.util.loadLabelVolume(acq_Dir + '/' + fl.name)
+        else:
+          slicer.util.loadVolume(acq_Dir + '/' + fl.name)
     
   def cleanup(self):
     pass
