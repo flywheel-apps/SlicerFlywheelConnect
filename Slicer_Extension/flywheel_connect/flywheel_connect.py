@@ -3,6 +3,8 @@ import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
+from importlib import import_module
+import shutil
 
 #
 # flywheel_connect
@@ -14,12 +16,14 @@ class flywheel_connect(ScriptedLoadableModule):
   """
 
   def __init__(self, parent):
+    FlyW=''
     try:
-      import flywheel
+      FlyW= import_module('flywheel')
     except Exception:
       from pip._internal import main as pipmain
       pipmain(["install","flywheel-sdk"])
-      import flywheel
+      FlyW= import_module('flywheel')
+    globals()['flywheel']=FlyW
 
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "flywheel_connect" # TODO make this more human readable by adding spaces
@@ -46,7 +50,6 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
   """
 
   def setup(self):
-    import flywheel
     ScriptedLoadableModuleWidget.setup(self)
     self.CacheDir=os.path.expanduser('~') + '/flywheelIO/'
 
@@ -77,6 +80,16 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     self.cacheDirTexBox.setText(self.CacheDir)
     apiKeyFormLayout.addWidget(self.cacheDirTexBox)    
 
+        #
+    # Use Cache CheckBox
+    #
+    self.useCacheCheckBox = qt.QCheckBox("Cache Images")
+    self.useCacheCheckBox.toolTip = '''Images cached to "Disk Cache". Otherwise, deleted at every new retrieval.'''
+
+    apiKeyFormLayout.addWidget(self.useCacheCheckBox)
+    self.useCacheCheckBox.setCheckState(True)
+    self.useCacheCheckBox.setTristate(False)
+
     self.groupsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.groupsCollapsibleGroupBox.setTitle('groups')
     self.layout.addWidget(self.groupsCollapsibleGroupBox)
@@ -94,17 +107,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     self.groupSelector.setMinimumWidth(200)
     groupsFormLayout.addWidget(self.groupSelector)
     
-    #
-    # Use Cache CheckBox
-    #
-    self.useCacheCeckBox = qt.QCheckBox("Cache Images")
-    self.useCacheCeckBox.toolTip = '''For faster browsing if this box is checked\
-    the browser will cache server responses and on further calls\
-    would load images based on saved data on disk.'''
 
-    groupsFormLayout.addWidget(self.useCacheCeckBox)
-    self.useCacheCeckBox.setCheckState(True)
-    self.useCacheCeckBox.setTristate(False)
 
     #
     # projects selector Form Area'
@@ -208,7 +211,6 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
   def onConnectAPIPushed(self):
     # Instantiate and connect widgets ...
-    import flywheel
     self.fw = flywheel.Client(self.apiKeyTexBox.text)
     #if client valid: TODO
     groups=self.fw.groups()
@@ -250,6 +252,8 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     #Create the save Path:
     acq_Dir=os.path.join(self.CacheDir,self.group.id,self.project.id,self.session.id,self.acquisition.id)
     try:
+      if not self.useCacheCheckBox.checkState():
+        shutil.rmtree(self.CacheDir)
       if not os.path.exists(acq_Dir):
         os.makedirs(acq_Dir)
     except Exception as e:
