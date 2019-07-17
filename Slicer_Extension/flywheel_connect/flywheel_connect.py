@@ -27,7 +27,7 @@ class flywheel_connect(ScriptedLoadableModule):
 
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "flywheel_connect" # TODO make this more human readable by adding spaces
-    self.parent.categories = ["Examples"]
+    self.parent.categories = ["Flywheel"]
     self.parent.dependencies = []
     self.parent.contributors = ["Joshua Jacobs (flywheel.io)"] # replace with "Firstname Lastname (Organization)"
     self.parent.helpText = """
