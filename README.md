@@ -10,14 +10,14 @@ flywheel-connect is built in the [3D Slicer Extension Framework](https://www.sli
 ## Installation Instructions
 1. Clone this github repository into a convenient location
 2. Use the 3D Slicer Modules->Developer Tools->Extension Wizard
-   [Image Here]
+   ![Extension Wizard](./Images/ExtensionWizard.png)
 3. Select Extension in the "Extension Tools" pane.
 4. Navigate to the flywheel-connect/Slicer_Extension directory of the github repository and "Open".
-	[Image Here]
+	![Browse to Extension](./Images/BrowseToExtension.png)
 
 ## Usage Instructions
 1. Navigate to flywheel-connect under the Modules drop-down box.
-	[Image Here]
+	![Select Extension](./Images/SelectExtension.png)
 2. To access the flywheel container hierarchy first enter your [flywheel api-key](https://docs.flywheel.io/hc/en-us/articles/360015135654-User-Profile) and press "connect".
 3. Navigate to the desired Acquisition in the hierarchy and press "Retrieve Acquisition". All compressed nifti files (.nii.gz) of that acquisition will be loaded into 3D Slicer.
 
