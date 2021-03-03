@@ -83,9 +83,9 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         #
         self.apiKeyTextLabel = qt.QLabel("API Key:")
         apiKeyFormLayout.addWidget(self.apiKeyTextLabel)
-        self.apiKeyTexBox = qt.QLineEdit()
-        self.apiKeyTexBox.setEchoMode(qt.QLineEdit.Password)
-        apiKeyFormLayout.addWidget(self.apiKeyTexBox)
+        self.apiKeyTextBox = qt.QLineEdit()
+        self.apiKeyTextBox.setEchoMode(qt.QLineEdit.Password)
+        apiKeyFormLayout.addWidget(self.apiKeyTextBox)
         self.connectAPIButton = qt.QPushButton("Connect Flywheel")
         self.connectAPIButton.enabled = True
         apiKeyFormLayout.addWidget(self.connectAPIButton)
@@ -98,9 +98,9 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         #
         self.cacheDirTextLabel = qt.QLabel("Disk Cache:")
         apiKeyFormLayout.addWidget(self.cacheDirTextLabel)
-        self.cacheDirTexBox = qt.QLineEdit()
-        self.cacheDirTexBox.setText(self.CacheDir)
-        apiKeyFormLayout.addWidget(self.cacheDirTexBox)
+        self.cacheDirTextBox = qt.QLineEdit()
+        self.cacheDirTextBox.setText(self.CacheDir)
+        apiKeyFormLayout.addWidget(self.cacheDirTextBox)
 
         #
         # Use Cache CheckBox
@@ -262,7 +262,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         segmentationsFormLayout.addWidget(self.segmentationButton)
 
         # connect signals and slots
-        # self.apiKeyTexBox.connect("textChanged(QString)", self.onApiKeyTextChanged)
+        # self.apiKeyTextBox.connect("textChanged(QString)", self.onApiKeyTextChanged)
 
         self.connectAPIButton.connect("clicked(bool)", self.onConnectAPIPushed)
 
@@ -313,8 +313,8 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     def onConnectAPIPushed(self):
         try:
             # Instantiate and connect widgets ...
-            if self.apiKeyTexBox.text:
-                self.fw_client = flywheel.Client(self.apiKeyTexBox.text)
+            if self.apiKeyTextBox.text:
+                self.fw_client = flywheel.Client(self.apiKeyTextBox.text)
             else:
                 self.fw_client = flywheel.Client()
             fw_user = self.fw_client.get_current_user()["email"]
@@ -331,7 +331,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         except Exception as e:
             self.groupSelector.clear()
             self.groupSelector.enabled = False
-            self.apiKeyTexBox.clear()
+            self.apiKeyTextBox.clear()
             self.projectSelector.clear()
             self.projectSelector.enabled = False
             self.sessionSelector.clear()
@@ -589,7 +589,8 @@ class flywheel_connectLogic(ScriptedLoadableModuleLogic):
             return False
         if inputVolumeNode.GetID() == outputVolumeNode.GetID():
             logging.debug(
-                "isValidInputOutputData failed: input and output volume is the same. Create a new volume for output to avoid this error."
+                "isValidInputOutputData failed: input and output volume is the same. "
+                "Create a new volume for output to avoid this error."
             )
             return False
         return True
@@ -601,13 +602,15 @@ class flywheel_connectLogic(ScriptedLoadableModuleLogic):
 
         if not self.isValidInputOutputData(inputVolume, outputVolume):
             slicer.util.errorDisplay(
-                "Input volume is the same as output volume. Choose a different output volume."
+                "Input volume is the same as output volume. "
+                "Choose a different output volume."
             )
             return False
 
         logging.info("Processing started")
 
-        # Compute the thresholded output volume using the Threshold Scalar Volume CLI module
+        # Compute the thresholded output volume using the Threshold Scalar Volume
+        # CLI module
         cliParams = {
             "InputVolume": inputVolume.GetID(),
             "OutputVolume": outputVolume.GetID(),
@@ -638,7 +641,9 @@ class flywheel_connectTest(ScriptedLoadableModuleTest):
     """
 
     def setUp(self):
-        """ Do whatever is needed to reset the state - typically a scene clear will be enough.
+        """ 
+        Do whatever is needed to reset the state - 
+        typically a scene clear will be enough.
         """
         slicer.mrmlScene.Clear(0)
 
