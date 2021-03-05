@@ -4,6 +4,7 @@ from qt import QAbstractItemView, QItemSelectionModel, QMenu
 
 from .fw_container_items import (
     AnalysisFolderItem,
+    AnalysisItem,
     ContainerItem,
     FileItem,
     GroupItem,
@@ -27,7 +28,7 @@ class TreeManagement:
         self.treeView = self.main_window.treeView
         self.cache_files = {}
         tree = self.treeView
-        #https://doc.qt.io/archives/qt-4.8/qabstractitemview.html
+        # https://doc.qt.io/archives/qt-4.8/qabstractitemview.html
         tree.selectionMode = QAbstractItemView.ExtendedSelection
         tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
         tree.clicked.connect(self.tree_clicked)
@@ -120,7 +121,7 @@ class TreeManagement:
         If a FileItem is selected, the load button is enabled.
         Else if a ContainerItem (e.g. Project, Session,...) is selected, upload is
         is enabled.
-        """        
+        """
         indexes = self.treeView.selectedIndexes()
         has_file = False
         containers_selected = 0
@@ -129,6 +130,9 @@ class TreeManagement:
                 item = self.source_model.itemFromIndex(index)
                 if isinstance(item, FileItem):
                     has_file = True
+                # Analysis Containers cannot be altered.
+                elif isinstance(item, AnalysisItem):
+                    containers_selected = 2
                 elif isinstance(item, ContainerItem):
                     containers_selected += 1
         else:
@@ -180,5 +184,5 @@ class TreeManagement:
 
                 self.cache_files[item.container.id] = {
                     "file_path": str(file_path),
-                    "file_type": file_type
+                    "file_type": file_type,
                 }
