@@ -1,22 +1,22 @@
+import shutil
+import datetime
 import logging
 import os
 import os.path as op
-import shutil
-import subprocess
-import sys
-import unittest
+import tempfile
+from glob import glob
+from zipfile import ZipFile
 from importlib import import_module
+from pathlib import Path
 
+import DICOMLib
 import ctk
 import qt
 import slicer
 import vtk
 from slicer.ScriptedLoadableModule import *
 
-
-def install(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
+from management.tree_management import TreeManagement
 
 #
 # flywheel_connect
@@ -33,7 +33,7 @@ class flywheel_connect(ScriptedLoadableModule):
         try:
             FlyW = import_module("flywheel")
         except Exception:
-            install("flywheel-sdk")
+            slicer.util.pip_install("flywheel-sdk")
             FlyW = import_module("flywheel")
         globals()["flywheel"] = FlyW
 
@@ -68,8 +68,15 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     """
 
     def setup(self):
+        """
+        Initialize all form elements
+        """
         ScriptedLoadableModuleWidget.setup(self)
+
+        # Declare Cache path
         self.CacheDir = os.path.expanduser("~") + "/flywheelIO/"
+
+        # #################Declare form elements#######################
 
         # Give a line_edit and label for the API key
         self.apiKeyCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
@@ -115,155 +122,68 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         self.useCacheCheckBox.setCheckState(True)
         self.useCacheCheckBox.setTristate(False)
 
-        self.groupsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-        self.groupsCollapsibleGroupBox.setTitle("groups")
-        self.layout.addWidget(self.groupsCollapsibleGroupBox)
+        # Data View Section
+        self.dataCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+        self.dataCollapsibleGroupBox.setTitle("Data")
+        self.layout.addWidget(self.dataCollapsibleGroupBox)
 
-        groupsFormLayout = qt.QFormLayout(self.groupsCollapsibleGroupBox)
+        dataFormLayout = qt.QFormLayout(self.dataCollapsibleGroupBox)
 
         #
         # group Selector ComboBox
         #
         self.groupSelectorLabel = qt.QLabel("Current group:")
-        groupsFormLayout.addWidget(self.groupSelectorLabel)
+        dataFormLayout.addWidget(self.groupSelectorLabel)
 
         # Selector ComboBox
         self.groupSelector = qt.QComboBox()
         self.groupSelector.enabled = False
         self.groupSelector.setMinimumWidth(200)
-        groupsFormLayout.addWidget(self.groupSelector)
-
-        #
-        # projects selector Form Area'
-        #
-        self.projectsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-        self.projectsCollapsibleGroupBox.setTitle("projects")
-        self.layout.addWidget(self.projectsCollapsibleGroupBox)
-
-        projectsFormLayout = qt.QFormLayout(self.projectsCollapsibleGroupBox)
+        dataFormLayout.addWidget(self.groupSelector)
 
         #
         # project Selector ComboBox
         #
         self.projectSelectorLabel = qt.QLabel("Current project:")
-        projectsFormLayout.addWidget(self.projectSelectorLabel)
+        dataFormLayout.addWidget(self.projectSelectorLabel)
+
         # Selector ComboBox
         self.projectSelector = qt.QComboBox()
         self.projectSelector.enabled = False
         self.projectSelector.setMinimumWidth(200)
-        projectsFormLayout.addWidget(self.projectSelector)
+        dataFormLayout.addWidget(self.projectSelector)
 
-        #
-        # sessions selector Form Area'
-        #
-        self.sessionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-        self.sessionsCollapsibleGroupBox.setTitle("sessions")
-        self.layout.addWidget(self.sessionsCollapsibleGroupBox)
+        # TreeView for Single Projects containers:
+        self.treeView = qt.QTreeView()
 
-        sessionsFormLayout = qt.QFormLayout(self.sessionsCollapsibleGroupBox)
+        self.treeView.enabled = False
+        self.treeView.setMinimumWidth(200)
+        self.treeView.setMinimumHeight(350)
+        self.tree_management = TreeManagement(self)
+        dataFormLayout.addWidget(self.treeView)
 
-        #
-        # session Selector ComboBox
-        #
-        self.sessionSelectorLabel = qt.QLabel("Current session:")
-        sessionsFormLayout.addWidget(self.sessionSelectorLabel)
-        # Selector ComboBox
-        self.sessionSelector = qt.QComboBox()
-        self.sessionSelector.enabled = False
-        self.sessionSelector.setMinimumWidth(200)
-        sessionsFormLayout.addWidget(self.sessionSelector)
+        # Load Files Button
+        self.loadFilesButton = qt.QPushButton("Load Selected Files")
+        self.loadFilesButton.enabled = False
+        dataFormLayout.addWidget(self.loadFilesButton)
 
-        #
-        # session-level Analysis Selector ComboBox
-        #
-        self.analysisSelectorLabel = qt.QLabel("Analyses:")
-        sessionsFormLayout.addWidget(self.analysisSelectorLabel)
-        # Selector ComboBox
-        self.analysisSelector = qt.QComboBox()
-        self.analysisSelector.enabled = False
-        self.analysisSelector.setMinimumWidth(200)
-        sessionsFormLayout.addWidget(self.analysisSelector)
+        # Upload to Flywheel Button
+        self.uploadFilesButton = qt.QPushButton(
+            "Upload to Flywheel\nas Container Files"
+        )
+        self.uploadFilesButton.enabled = False
+        dataFormLayout.addWidget(self.uploadFilesButton)
 
-        #
-        # session-level Analysis-file Selector ComboBox
-        #
-        self.analysisFilesSelectorLabel = qt.QLabel("Analysis-files:")
-        sessionsFormLayout.addWidget(self.analysisFilesSelectorLabel)
-        # Selector ComboBox
-        self.analysisFilesSelector = qt.QComboBox()
-        self.analysisFilesSelector.enabled = False
-        self.analysisFilesSelector.setMinimumWidth(200)
-        sessionsFormLayout.addWidget(self.analysisFilesSelector)
+        # As Analysis Checkbox
+        self.asAnalysisCheck = qt.QCheckBox("As Analysis")
+        self.asAnalysisCheck.toolTip = (
+            "Upload Files to Flywheel as an Analysis Container."
+        )
+        self.asAnalysisCheck.enabled = False
 
-        self.analysisFileButton = qt.QPushButton("Retrieve Analysis File")
-        self.analysisFileButton.enabled = False
-        sessionsFormLayout.addWidget(self.analysisFileButton)
+        dataFormLayout.addWidget(self.asAnalysisCheck)
 
-        #
-        # acquisitions selector Form Area'
-        #
-        self.acquisitionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-        self.acquisitionsCollapsibleGroupBox.setTitle("acquisitions")
-        self.layout.addWidget(self.acquisitionsCollapsibleGroupBox)
-
-        acquisitionsFormLayout = qt.QFormLayout(self.acquisitionsCollapsibleGroupBox)
-
-        #
-        # acquisition Selector ComboBox
-        #
-        self.acquisitionSelectorLabel = qt.QLabel("Current acquisition:")
-        acquisitionsFormLayout.addWidget(self.acquisitionSelectorLabel)
-        # Selector ComboBox
-        self.acquisitionSelector = qt.QComboBox()
-        self.acquisitionSelector.enabled = False
-        self.acquisitionSelector.setMinimumWidth(200)
-        acquisitionsFormLayout.addWidget(self.acquisitionSelector)
-
-        #
-        # acquisition-level file Selector ComboBox
-        #
-        self.acquisitionFilesSelectorLabel = qt.QLabel("Acquisition-files:")
-        acquisitionsFormLayout.addWidget(self.acquisitionFilesSelectorLabel)
-        # Selector ComboBox
-        self.acquisitionFilesSelector = qt.QComboBox()
-        self.acquisitionFilesSelector.enabled = False
-        self.acquisitionFilesSelector.setMinimumWidth(200)
-        acquisitionsFormLayout.addWidget(self.acquisitionFilesSelector)
-
-        self.acquisitionFileButton = qt.QPushButton("Retrieve Acquisition File")
-        self.acquisitionFileButton.enabled = False
-        acquisitionsFormLayout.addWidget(self.acquisitionFileButton)
-
-        #
-        # Segmentations selector Form Area'
-        #
-        self.segmentationsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-        self.segmentationsCollapsibleGroupBox.setTitle("segmentations")
-        self.layout.addWidget(self.segmentationsCollapsibleGroupBox)
-
-        segmentationsFormLayout = qt.QFormLayout(self.segmentationsCollapsibleGroupBox)
-
-        #
-        # Segmentations Selector ComboBox
-        #
-        self.segmentationsSelectorLabel = qt.QLabel("Current segmentation:")
-        segmentationsFormLayout.addWidget(self.acquisitionSelectorLabel)
-        # Selector ComboBox
-        self.segmentationSelector = slicer.qMRMLNodeComboBox()
-        self.segmentationSelector.nodeTypes = (("vtkMRMLSegmentationNode"), "")
-        self.segmentationSelector.noneEnabled = False
-        self.segmentationSelector.setMRMLScene(slicer.mrmlScene)
-        self.segmentationSelector.setToolTip("Select fixed segmentation")
-        self.segmentationSelector.name = "segmentationSelector"
-
-        segmentationsFormLayout.addWidget(self.segmentationSelector)
-        self.segmentationButton = qt.QPushButton("Upload Segmentation")
-        self.segmentationButton.enabled = False
-        segmentationsFormLayout.addWidget(self.segmentationButton)
-
-        # connect signals and slots
-        # self.apiKeyTextBox.connect("textChanged(QString)", self.onApiKeyTextChanged)
-
+        # ################# Connect form elements #######################
         self.connectAPIButton.connect("clicked(bool)", self.onConnectAPIPushed)
 
         self.groupSelector.connect("currentIndexChanged(QString)", self.onGroupSelected)
@@ -272,45 +192,19 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             "currentIndexChanged(QString)", self.onProjectSelected
         )
 
-        self.sessionSelector.connect(
-            "currentIndexChanged(QString)", self.onSessionSelected
-        )
-        self.analysisSelector.connect(
-            "currentIndexChanged(QString)", self.onAnalysisSelected
-        )
+        self.loadFilesButton.connect("clicked(bool)", self.onLoadFilesPushed)
 
-        self.analysisFilesSelector.connect(
-            "currentIndexChanged(QString)", self.onAnalysisFileSelect
-        )
+        self.uploadFilesButton.connect("clicked(bool)", self.save_scene_to_flywheel)
 
-        self.analysisFileButton.connect("clicked(bool)", self.onAnalysisFilePushed)
+        self.asAnalysisCheck.stateChanged.connect(self.onAnalysisCheckChanged)
 
-        self.acquisitionSelector.connect(
-            "currentIndexChanged(QString)", self.onAcquisitionSelected
-        )
-
-        self.acquisitionFilesSelector.connect(
-            "currentIndexChanged(QString)", self.onAcquisitionFileSelected
-        )
-
-        self.acquisitionFileButton.connect(
-            "clicked(bool)", self.onAcquisitionFilePushed
-        )
-
-        self.segmentationSelector.connect(
-            "currentNodeChanged(vtkMRMLNode*)", self.onSegmentationsChanged
-        )
-
-        self.segmentationButton.connect("clicked(bool)", self.ExportSegmentation)
-
-        self.onSegmentationsChanged()
         # Add vertical spacer
         self.layout.addStretch(1)
 
-    def onApiKeyTextChanged(self, item):
-        self.connectAPIButton.enabled = True
-
     def onConnectAPIPushed(self):
+        """
+        Connect to a Flywheel instance for valid api-key.
+        """        
         try:
             # Instantiate and connect widgets ...
             if self.apiKeyTextBox.text:
@@ -328,21 +222,24 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             self.groupSelector.clear()
             for group in groups:
                 self.groupSelector.addItem(group.label, group.id)
+
+            # Clear out any other instance's data from Slicer before proceeding.
+            slicer.mrmlScene.Clear(0)
         except Exception as e:
             self.groupSelector.clear()
             self.groupSelector.enabled = False
             self.apiKeyTextBox.clear()
             self.projectSelector.clear()
             self.projectSelector.enabled = False
-            self.sessionSelector.clear()
-            self.sessionSelector.enabled = False
-            self.acquisitionSelector.clear()
-            self.acquisitionSelector.enabled = False
-            self.acquisitionFileButton.enabled = False
-            self.segmentationButton.enabled = False
             slicer.util.errorDisplay(e)
 
     def onGroupSelected(self, item):
+        """
+        On selected Group from dropdown, update casecade
+
+        Args:
+            item (str): Group name or empty string
+        """        
         if item:
             group_id = self.groupSelector.currentData
             self.group = self.fw_client.get(group_id)
@@ -353,196 +250,275 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                 self.projectSelector.addItem(project.label, project.id)
 
     def onProjectSelected(self, item):
+        """
+        On selected project from dropdown, update the tree
+
+        Args:
+            item (str): Name of project or empty string
+        """        
+        tree_rows = self.tree_management.source_model.rowCount()
         if item:
             project_id = self.projectSelector.currentData
             self.project = self.fw_client.get(project_id)
-            sessions = self.project.sessions()
-            self.sessionSelector.enabled = len(sessions) > 0
-            self.sessionSelector.clear()
-            for session in sessions:
-                self.sessionSelector.addItem(session.label, session.id)
+
+            # Remove the rows from the tree and repopulate
+            if tree_rows > 0:
+                self.tree_management.source_model.removeRows(0, tree_rows)
+            self.tree_management.populateTreeFromProject(self.project)
+            self.treeView.enabled = True
         else:
-            self.sessionSelector.enabled = False
-            self.sessionSelector.clear()
-            self.analysisSelector.enabled = False
-            self.analysisSelector.clear()
-            self.analysisFilesSelector.enabled = False
-            self.analysisFilesSelector.clear()
-            self.analysisFileButton.enabled = False
-            self.acquisitionSelector.enabled = False
-            self.acquisitionSelector.clear()
-            self.acquisitionFilesSelector.enabled = False
-            self.acquisitionFilesSelector.clear()
-            self.acquisitionFileButton.enabled = False
+            self.treeView.enabled = False
+            # Remove the rows from the tree and don't repopulate
+            if tree_rows > 0:
+                self.tree_management.source_model.removeRows(0, tree_rows)
+            self.loadFilesButton.enabled = False
+
             self.segmentationButton.enabled = False
 
-    def onSessionSelected(self, item):
-        if item:
-            session_id = self.sessionSelector.currentData
-            self.session = self.fw_client.get(session_id)
-            self.session = self.session.reload()
 
-            sessionAnalyses = self.session.analyses
-            self.analysisSelector.enabled = len(sessionAnalyses) > 0
-            self.analysisSelector.clear()
-            self.analysisFilesSelector.enabled = False
-            self.analysisFilesSelector.clear()
-            for analysis in sessionAnalyses:
-                self.analysisSelector.addItem(analysis.label, analysis.id)
+    def is_volume(self, file_path):
+        """
+        Check file_path for a 3D Slicer compatible volume file.
 
-            acquisitions = self.session.acquisitions()
-            self.acquisitionSelector.enabled = len(acquisitions) > 0
-            self.acquisitionSelector.clear()
-            for acquisition in acquisitions:
-                self.acquisitionSelector.addItem(acquisition.label, acquisition.id)
-        else:
-            self.analysisSelector.enabled = False
-            self.analysisSelector.clear()
-            self.analysisFileButton.enabled = False
-            self.analysisFilesSelector.enabled = False
-            self.analysisFilesSelector.clear()
-            self.acquisitionSelector.enabled = False
-            self.acquisitionSelector.clear()
-            self.acquisitionFilesSelector.enabled = False
-            self.acquisitionFilesSelector.clear()
-            self.acquisitionFileButton.enabled = False
-            self.segmentationButton.enabled = False
+        See https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
 
-    def onAnalysisSelected(self, item):
-        if item:
-            analysis_id = self.analysisSelector.currentData
-            self.sessionAnalysis = self.fw_client.get(analysis_id).reload()
-            files = self.sessionAnalysis["files"]
-            self.analysisFilesSelector.enabled = len(files) > 0
-            self.analysisFilesSelector.clear()
-            self.analysisFileButton.enabled = len(files) > 0
-            for fl in files:
-                self.analysisFilesSelector.addItem(fl.name, fl.id)
+        Args:
+            file_path (str): Path to cached file
 
-    def onAnalysisFileSelect(self, item):
-        if item:
-            self.analysis_file = self.sessionAnalysis["files"][
-                self.analysisFilesSelector.currentIndex
-            ]
+        Returns:
+            boolean: True for supported volume type
+        """
 
-    def onAnalysisFilePushed(self):
-        # Create the save Path:
-        ana_file_dir = os.path.join(
-            self.CacheDir,
-            self.group.id,
-            self.project.id,
-            self.session.id,
-            self.sessionAnalysis.id,
-            self.analysis_file.id,
-        )
-        # TODO: fw sdk methods the "resolver" to browse hierarchy?
-        try:
-            if not self.useCacheCheckBox.checkState():
-                shutil.rmtree(self.CacheDir)
-            if not os.path.exists(ana_file_dir):
-                os.makedirs(ana_file_dir)
-        except Exception as e:
-            slicer.util.errorDisplay(e)
+        valid_slicer_volumes = [
+            ".dcm", # DICOM
+            ".nrrd", ".nhdr", # NRRD
+            ".mhd", ".mha", # MetaImage
+            ".vtk",
+            ".hdr", ".img", ".img.gz", # Analyze
+            ".nia,", ".nii", ".nii.gz", # NIfTI
+            ".bmp", 
+            ".pic",
+            ".mask",
+            ".gipl", ".gipl.gz",
+            ".jpg", ".jpeg",
+            ".lsm",
+            ".png",
+            ".spr",
+            ".tif", ".tiff",
+            ".mgz",
+            ".mrc", ".rec" 
+        ]
+        for vol_type in valid_slicer_volumes:
+            if file_path.endswith(vol_type):
+                return True
+        return False
 
-        filename = self.analysis_file.name
-        filepath = os.path.join(ana_file_dir, filename)
-        # TODO: accomodate dicoms.....
-        if not os.path.exists(filepath) and ("nii.gz" in filename):
-            self.sessionAnalysis.download_file(filename, filepath)
-            slicer.util.loadVolume(filepath)
-        elif "nii.gz" in filename:
-            slicer.util.loadVolume(filepath)
+    def is_model(self, file_path):
+        """
+        Check file_path for a 3D Slicer compatible model file.
 
-    def onAcquisitionSelected(self, item):
-        if self.acquisitionSelector.currentIndex >= 0:
-            self.acquisition = self.session.acquisitions()[
-                self.acquisitionSelector.currentIndex
-            ].reload()
-            files = self.acquisition.files
-            self.acquisitionFilesSelector.enabled = len(files) > 0
-            self.acquisitionFilesSelector.clear()
-            self.acquisitionFileButton.enabled = len(files) > 0
-            for fl in files:
-                self.acquisitionFilesSelector.addItem(fl.name, fl.id)
+        See https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
 
-    def onAcquisitionFileSelected(self, item):
-        self.acquisition_file = self.acquisition.files[
-            self.acquisitionFilesSelector.currentIndex
+        Args:
+            file_path (str): Path to cached file
+
+        Returns:
+            boolean: True for supported model type
+        """
+
+        valid_slicer_models = [
+            ".vtk",
+            ".vtp",
+            ".stl",
+            ".obj",
+            ".orig", 
+            ".inflated", ".sphere", ".white", ".smoothwm", ".pial", # FreeSurfer
+            ".g", ".byu",
+        ]
+        for model_type in valid_slicer_models:
+            if file_path.endswith(model_type):
+                return True
+        return False        
+
+    def is_compressed_dicom(self, file_path, file_type):
+        """
+        Check file_path and file_type for a flywheel compressed dicom archive.
+
+        Args:
+            file_path (str): Path to cached file
+            file_type (str): Type of Flywheel file
+
+        Returns:
+            boolean: True for supported compressed dicom type 
+        """        
+        if file_path.endswith(".zip") and file_type=="dicom":
+            return True
+        
+        return False
+
+    def load_dicom_archive(self, file_path):
+        """
+        Load unzipped DICOMs into Slicer.
+
+        Args:
+            file_path (str): path to the cached dicom archive.
+
+        https://discourse.slicer.org/t/fastest-way-to-load-dicom/9317/2
+        """        
+        with tempfile.TemporaryDirectory() as dicomDataDir:
+            dicom_zip = ZipFile(file_path)
+            dicom_zip.extractall(path=dicomDataDir)
+            DICOMLib.importDicom(dicomDataDir)
+            dicomFiles = slicer.util.getFilesInDirectory(dicomDataDir)
+            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists([dicomFiles])
+            loadedNodeIDs = DICOMLib.loadLoadables(loadablesByPlugin)
+
+    def onLoadFilesPushed(self):
+        """
+        Load tree-selected files into 3D Slicer for viewing.
+        """        
+
+        # If Cache not checked, delete CacheDir recursively
+        if not self.useCacheCheckBox.checkState():
+            shutil.rmtree(self.CacheDir)
+            Path(self.CacheDir).mkdir(parents=True, exist_ok=True)
+
+        # Cache all selected files
+        self.tree_management.cache_selected_for_open()
+
+        # Walk through cached files... This could use "types"
+        for k, file_dict in self.tree_management.cache_files.items():
+            file_path = file_dict["file_path"]
+            file_type = file_dict["file_type"]
+            # Check for volume
+            if self.is_volume(file_path):
+                try:
+                    slicer.util.loadVolume(file_path)
+                except Exception as e:
+                    print("Not a valid Volume type.")
+            # Check for model
+            elif self.is_model(file_path):
+                try:
+                    slicer.util.loadModel(file_path)
+                except Exception as e:
+                    print("Not a valid Model type.")
+            # TODO: Add other Slicer datatypes.
+            # Check for Flywheel compressed dicom
+            elif self.is_compressed_dicom(file_path, file_type):
+                try:
+                    self.load_dicom_archive(file_path)
+                except Exception as e:
+                    print("Not a valid DICOM archive.")
+
+    def save_analysis(self, parent_container_item, output_path):
+        """
+        Save selected files to a new analysis container under a parent container.
+
+        Args:
+            parent_container_item (ContainerItem): Tree Item representation of parent
+                container.
+            output_path (Path): Temporary path to where Slicer files are saved.
+        """        
+        parent_container = self.fw_client.get(parent_container_item.data())
+
+        # Get all cached paths represented in Slicer
+        input_files_paths = [
+            Path(node.GetFileName())
+            for node in slicer.util.getNodesByClass("vtkMRMLStorageNode")
+            if self.CacheDir in node.GetFileName()
         ]
 
-    def onAcquisitionFilePushed(self):
-        # Create the save Path:
-        acq_file_dir = os.path.join(
-            self.CacheDir,
-            self.group.id,
-            self.project.id,
-            self.session.id,
-            self.acquisition.id,
-            self.acquisition_file.id,
-        )
-        # TODO: fw sdk methods the "resolver" to browse hierarchy?
-        try:
-            if not self.useCacheCheckBox.checkState():
-                shutil.rmtree(self.CacheDir)
-            if not os.path.exists(acq_file_dir):
-                os.makedirs(acq_file_dir)
-        except Exception as e:
-            slicer.util.errorDisplay(e)
-        filename = self.acquisition_file.name
-        filepath = os.path.join(acq_file_dir, filename)
-        # TODO: accomodate dicoms.....
-        if not os.path.exists(filepath) and ("nii.gz" in filename):
-            self.acquisition.download_file(filename, filepath)
-            slicer.util.loadVolume(filepath)
-        elif "nii.gz" in filename:
-            slicer.util.loadVolume(filepath)
+        # Represent those files as file reference from their respective parents
+        input_files = [
+            self.fw_client.get(str(input_path.parents[1]).split("/")[-1])
+            .get_file(input_path.name)
+            .ref()
+            for input_path in input_files_paths
+        ]
 
-    def onSegmentationsChanged(self):
-        if isinstance(
-            self.segmentationSelector.currentNode(), slicer.vtkMRMLSegmentationNode
-        ) and (self.acquisitionSelector.currentIndex >= 0):
-            self.segmentationButton.enabled = True
+        # Generic name... could be improved.
+        analysis_name = "3D Slicer " + datetime.datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        # Create analysis container
+        analysis = parent_container.add_analysis(
+            label=analysis_name, inputs=input_files
+        )
+
+        # Get all files from temp directory
+        outputs = [
+            file_path
+            for file_path in glob(str(output_path / "*"))
+            if Path(file_path).is_file()
+        ]
+
+        # Finalize analysis
+        analysis.upload_file(outputs)
+
+    def save_files_to_container(self, parent_container_item, output_path):
+        """
+        Save selected files to a parent Flywheel container.
+
+        Files that already exist in the container are ignored.
+
+        TODO: Update the file version
+
+        Args:
+            parent_container_item (ContainerItem):  Tree Item representation of parent
+                container.
+            output_path (Path): Temporary path to where Slicer files are saved.
+        """        
+        parent_container = self.fw_client.get(parent_container_item.data()).reload()
+        parent_container_files = [fl.name for fl in parent_container.files]
+        for output_file in [
+            file_path
+            for file_path in glob(str(output_path / "*"))
+            if (
+                Path(file_path).is_file()
+                and Path(file_path).name not in parent_container_files
+            )
+        ]:
+            parent_container.upload_file(output_file)
+
+    def save_scene_to_flywheel(self):
+        """
+        Save selected files in the current Slicer scene to a Flywheel Analysis or 
+        Container.
+        """        
+        with tempfile.TemporaryDirectory() as tmp_output_path:
+            output_path = Path(tmp_output_path)
+            slicer.mrmlScene.SetRootDirectory(str(output_path))
+            slicer.mrmlScene.SetURL(str(output_path/"Slicer_Scene.mrml"))
+            if slicer.util.openSaveDataDialog():
+                index = self.treeView.selectedIndexes()[0]
+                container_item = self.tree_management.source_model.itemFromIndex(index)
+                save_as_analysis = self.asAnalysisCheck.isChecked()
+                if save_as_analysis:
+                    self.save_analysis(container_item, output_path)
+                else:
+                    self.save_files_to_container(container_item, output_path)
+            
+            # Remove storage nodes with the tmp_output_path in them
+            for node in [
+                node
+                for node in slicer.util.getNodesByClass("vtkMRMLStorageNode")
+                if tmp_output_path in node.GetFileName()
+            ]:
+                slicer.mrmlScene.RemoveNode(node)
+
+    def onAnalysisCheckChanged(self, item):
+        """
+        Update the text on the "Upload" button depending on item state
+
+        Args:
+            item (ItemData): Data from item... not used.
+        """        
+        if self.asAnalysisCheck.isChecked():
+            text = "Upload to Flywheel\nas Analysis"
         else:
-            self.segmentationButton.enabled = False
-
-    def ExportSegmentation(self):
-        # gather references nodes
-        segmentationNode = self.segmentationSelector.currentNode()
-        referenceVolumeNode = segmentationNode.GetNodeReference(
-            segmentationNode.GetReferenceImageGeometryReferenceRole()
-        )
-        labelmapVolumeNode = slicer.mrmlScene.AddNewNodeByClass(
-            "vtkMRMLLabelMapVolumeNode"
-        )
-
-        # convert segmentation to label map
-        slicer.modules.segmentations.logic().ExportVisibleSegmentsToLabelmapNode(
-            segmentationNode, labelmapVolumeNode, referenceVolumeNode
-        )
-
-        # Create filename and save.
-        orig_file = referenceVolumeNode.GetStorageNode().GetFileName()
-        filename = (
-            referenceVolumeNode.GetStorageNode()
-            .GetFileName()
-            .replace(".nii.gz", "_seg.nii.gz")
-        )
-        myStorageNode = labelmapVolumeNode.CreateDefaultStorageNode()
-        myStorageNode.SetFileName(filename)
-        myStorageNode.WriteData(labelmapVolumeNode)
-
-        # How to save to flywheel?
-        # This acquisition save does not work....
-        # self.acquisition.update_file(filename)
-        # gives "needs dictionary or kwargs"
-        # when given these, it gives APIException()
-
-        # What about Analysis object?
-        file_ref = self.acquisition.get_file(op.basename(orig_file)).ref()
-        anal = self.session.add_analysis(
-            label="3D Slicer Segmentation", inputs=[file_ref]
-        )
-        anal.upload_output(filename)
+            text = "Upload to Flywheel\nas Container Files"
+        self.uploadFilesButton.setText(text)
 
     def cleanup(self):
         pass
@@ -577,8 +553,7 @@ class flywheel_connectLogic(ScriptedLoadableModuleLogic):
         return True
 
     def isValidInputOutputData(self, inputVolumeNode, outputVolumeNode):
-        """Validates if the output is not the same as input
-        """
+        """Validates if the output is not the same as input"""
         if not inputVolumeNode:
             logging.debug("isValidInputOutputData failed: no input volume node defined")
             return False
@@ -641,20 +616,19 @@ class flywheel_connectTest(ScriptedLoadableModuleTest):
     """
 
     def setUp(self):
-        """ 
-        Do whatever is needed to reset the state - 
+        """
+        Do whatever is needed to reset the state -
         typically a scene clear will be enough.
         """
         slicer.mrmlScene.Clear(0)
 
     def runTest(self):
-        """Run as few or as many tests as needed here.
-        """
+        """Run as few or as many tests as needed here."""
         self.setUp()
         self.test_flywheel_connect1()
 
     def test_flywheel_connect1(self):
-        """ Ideally you should have several levels of tests.  At the lowest level
+        """Ideally you should have several levels of tests.  At the lowest level
         tests should exercise the functionality of the logic with different inputs
         (both valid and invalid).  At higher levels your tests should emulate the
         way the user would interact with your code and confirm that it still works
@@ -682,4 +656,3 @@ class flywheel_connectTest(ScriptedLoadableModuleTest):
         logic = flywheel_connectLogic()
         self.assertIsNotNone(logic.hasImageData(volumeNode))
         self.delayDisplay("Test passed!")
-
