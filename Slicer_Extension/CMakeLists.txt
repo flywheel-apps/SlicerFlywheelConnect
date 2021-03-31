@@ -4,12 +4,12 @@ project(flywheel_connect)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "http://slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/flywheel_connect")
-set(EXTENSION_CATEGORY "Examples")
+set(EXTENSION_HOMEPAGE "https://github.com/flywheel-apps/SlicerFlywheelConnect")
+set(EXTENSION_CATEGORY "Utilities")
 set(EXTENSION_CONTRIBUTORS "Joshua Jacobs (flywheel.io)")
-set(EXTENSION_DESCRIPTION "This extension is to allow data exchange between a flywheel instance and 3D Slicer.")
-set(EXTENSION_ICONURL "http://www.example.com/Slicer/Extensions/flywheel_connect.png")
-set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/flywheel_connect/Screenshots/1.png")
+set(EXTENSION_DESCRIPTION "This extension allows for downloading imaging files from a Flywheel (https://flywheel.io) instance project and uploading Slicer outputs back into Flywheel.")
+set(EXTENSION_ICONURL "https://raw.githubusercontent.com/flywheel-apps/SlicerFlywheelConnect/master/Images/favicon.png")
+set(EXTENSION_SCREENSHOTURLS "https://github.com/flywheel-apps/SlicerFlywheelConnect/blob/master/Images/TreeD_Slicer.png")
 set(EXTENSION_DEPENDS "NA") # Specified as a space separated string, a list or 'NA' if any
 
 #-----------------------------------------------------------------------------
