@@ -1,6 +1,10 @@
 # flywheel-connect
-A 3D Slicer Extension to view, select, and download image and model from the flywheel heirarchy in the interactive environment of [3D Slicer](https://www.slicer.org/).
 
+A 3D Slicer Extension to view, select, and download images from a Flywheel instance to 
+[3D Slicer](https://www.slicer.org/) and storing Slicer outputs back to Flywheel.
+
+Flywheel is a comprehensive data management solutions for life sciences and imaging research.
+More details at [https://flywheel.io/](https://flywheel.io/).
 
 ## Usage Instructions
 1. Navigate to flywheel-connect under the Modules drop-down box.
