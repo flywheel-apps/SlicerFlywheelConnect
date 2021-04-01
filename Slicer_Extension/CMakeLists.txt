@@ -7,7 +7,7 @@ project(flywheel_connect)
 set(EXTENSION_HOMEPAGE "https://github.com/flywheel-apps/SlicerFlywheelConnect")
 set(EXTENSION_CATEGORY "Utilities")
 set(EXTENSION_CONTRIBUTORS "Joshua Jacobs (flywheel.io)")
-set(EXTENSION_DESCRIPTION "This extension allows for downloading imaging files from a Flywheel (https://flywheel.io) instance project and uploading Slicer outputs back into Flywheel.")
+set(EXTENSION_DESCRIPTION "This extension allows for downloading files from Flywheel to Slicer and uploading Slicer outputs back into Flywheel. Flywheel is a comprehensive data management solutions for life sciences and imaging research (https://flywheel.io/).")
 set(EXTENSION_ICONURL "https://raw.githubusercontent.com/flywheel-apps/SlicerFlywheelConnect/master/Images/favicon.png")
 set(EXTENSION_SCREENSHOTURLS "https://github.com/flywheel-apps/SlicerFlywheelConnect/blob/master/Images/TreeD_Slicer.png")
 set(EXTENSION_DEPENDS "NA") # Specified as a space separated string, a list or 'NA' if any
