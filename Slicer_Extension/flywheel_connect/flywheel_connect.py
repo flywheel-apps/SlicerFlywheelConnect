@@ -22,6 +22,69 @@ from management.tree_management import TreeManagement
 # flywheel_connect
 #
 
+# https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
+SLICER_DATA_FORMATS = {
+    "slicer_volumes": [
+        ".dcm",  # DICOM
+        ".nrrd",  # NRRD
+        ".nhdr",  # NRRD
+        ".mhd",  # MetaImage
+        ".mha",  # MetaImage
+        ".vtk",
+        ".hdr",  # Analyze
+        ".img",  # Analyze
+        ".img.gz",  # Analyze
+        ".nia,",  # NIfTI
+        ".nii",  # NIfTI
+        ".nii.gz",  # NIfTI
+        ".bmp",
+        ".pic",
+        ".mask",
+        ".gipl",
+        ".gipl.gz",
+        ".jpg",
+        ".jpeg",
+        ".lsm",
+        ".png",
+        ".spr",
+        ".tif",
+        ".tiff",
+        ".mgz",
+        ".mrc",
+        ".rec",
+    ],
+    "slicer_models": [
+        ".vtk",
+        ".vtp",
+        ".stl",
+        ".obj",
+        ".orig",
+        ".inflated",  # FreeSurfer
+        ".sphere",  # FreeSurfer
+        ".white",  # FreeSurfer
+        ".smoothwm",  # FreeSurfer
+        ".pial",  # FreeSurfer
+        ".g",
+        ".byu",
+    ],
+    "slicer_fiducials": [".fcsv"],
+    "slicer_rulers": [".acsv"],
+    "slicer_transforms": [
+        ".h5",  # ITK Transforms
+        ".tfm",  # ITK Transforms
+        ".mat",  # Matlab Transforms
+        ".nrrd",  # Displacement Field
+        ".nhdr",  # Displacement Field
+        ".mha",  # Displacement Field
+        ".mhd",  # Displacement Field
+        ".nii",  # Displacement Field
+        ".nii.gz",  # Displacement Field
+    ],
+    "slicer_transfer_functions": [".vp"],
+    "slicer_lookup_tables": [".ctbl"],
+    "slicer_double_arrays": [".mcsv"],
+}
+
 
 class flywheel_connect(ScriptedLoadableModule):
     """Uses ScriptedLoadableModule base class, available at:
@@ -204,7 +267,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     def onConnectAPIPushed(self):
         """
         Connect to a Flywheel instance for valid api-key.
-        """        
+        """
         try:
             # Instantiate and connect widgets ...
             if self.apiKeyTextBox.text:
@@ -239,7 +302,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
         Args:
             item (str): Group name or empty string
-        """        
+        """
         if item:
             group_id = self.groupSelector.currentData
             self.group = self.fw_client.get(group_id)
@@ -255,7 +318,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
         Args:
             item (str): Name of project or empty string
-        """        
+        """
         tree_rows = self.tree_management.source_model.rowCount()
         if item:
             project_id = self.projectSelector.currentData
@@ -275,7 +338,6 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
             self.segmentationButton.enabled = False
 
-
     def is_volume(self, file_path):
         """
         Check file_path for a 3D Slicer compatible volume file.
@@ -289,26 +351,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             boolean: True for supported volume type
         """
 
-        valid_slicer_volumes = [
-            ".dcm", # DICOM
-            ".nrrd", ".nhdr", # NRRD
-            ".mhd", ".mha", # MetaImage
-            ".vtk",
-            ".hdr", ".img", ".img.gz", # Analyze
-            ".nia,", ".nii", ".nii.gz", # NIfTI
-            ".bmp", 
-            ".pic",
-            ".mask",
-            ".gipl", ".gipl.gz",
-            ".jpg", ".jpeg",
-            ".lsm",
-            ".png",
-            ".spr",
-            ".tif", ".tiff",
-            ".mgz",
-            ".mrc", ".rec" 
-        ]
-        for vol_type in valid_slicer_volumes:
+        for vol_type in SLICER_DATA_FORMATS["slicer_volumes"]:
             if file_path.endswith(vol_type):
                 return True
         return False
@@ -326,19 +369,10 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             boolean: True for supported model type
         """
 
-        valid_slicer_models = [
-            ".vtk",
-            ".vtp",
-            ".stl",
-            ".obj",
-            ".orig", 
-            ".inflated", ".sphere", ".white", ".smoothwm", ".pial", # FreeSurfer
-            ".g", ".byu",
-        ]
-        for model_type in valid_slicer_models:
+        for model_type in SLICER_DATA_FORMATS["slicer_models"]:
             if file_path.endswith(model_type):
                 return True
-        return False        
+        return False
 
     def is_compressed_dicom(self, file_path, file_type):
         """
@@ -349,11 +383,11 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             file_type (str): Type of Flywheel file
 
         Returns:
-            boolean: True for supported compressed dicom type 
-        """        
-        if file_path.endswith(".zip") and file_type=="dicom":
+            boolean: True for supported compressed dicom type
+        """
+        if file_path.endswith(".zip") and file_type == "dicom":
             return True
-        
+
         return False
 
     def load_dicom_archive(self, file_path):
@@ -364,19 +398,21 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             file_path (str): path to the cached dicom archive.
 
         https://discourse.slicer.org/t/fastest-way-to-load-dicom/9317/2
-        """        
+        """
         with tempfile.TemporaryDirectory() as dicomDataDir:
             dicom_zip = ZipFile(file_path)
             dicom_zip.extractall(path=dicomDataDir)
             DICOMLib.importDicom(dicomDataDir)
             dicomFiles = slicer.util.getFilesInDirectory(dicomDataDir)
-            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists([dicomFiles])
+            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists(
+                [dicomFiles]
+            )
             loadedNodeIDs = DICOMLib.loadLoadables(loadablesByPlugin)
 
     def onLoadFilesPushed(self):
         """
         Load tree-selected files into 3D Slicer for viewing.
-        """        
+        """
 
         # If Cache not checked, delete CacheDir recursively
         if not self.useCacheCheckBox.checkState():
@@ -418,7 +454,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             parent_container_item (ContainerItem): Tree Item representation of parent
                 container.
             output_path (Path): Temporary path to where Slicer files are saved.
-        """        
+        """
         parent_container = self.fw_client.get(parent_container_item.data())
 
         # Get all cached paths represented in Slicer
@@ -468,7 +504,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             parent_container_item (ContainerItem):  Tree Item representation of parent
                 container.
             output_path (Path): Temporary path to where Slicer files are saved.
-        """        
+        """
         parent_container = self.fw_client.get(parent_container_item.data()).reload()
         parent_container_files = [fl.name for fl in parent_container.files]
         for output_file in [
@@ -483,13 +519,13 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
     def save_scene_to_flywheel(self):
         """
-        Save selected files in the current Slicer scene to a Flywheel Analysis or 
+        Save selected files in the current Slicer scene to a Flywheel Analysis or
         Container.
-        """        
+        """
         with tempfile.TemporaryDirectory() as tmp_output_path:
             output_path = Path(tmp_output_path)
             slicer.mrmlScene.SetRootDirectory(str(output_path))
-            slicer.mrmlScene.SetURL(str(output_path/"Slicer_Scene.mrml"))
+            slicer.mrmlScene.SetURL(str(output_path / "Slicer_Scene.mrml"))
             if slicer.util.openSaveDataDialog():
                 index = self.treeView.selectedIndexes()[0]
                 container_item = self.tree_management.source_model.itemFromIndex(index)
@@ -498,7 +534,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                     self.save_analysis(container_item, output_path)
                 else:
                     self.save_files_to_container(container_item, output_path)
-            
+
             # Remove storage nodes with the tmp_output_path in them
             for node in [
                 node
@@ -513,7 +549,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
         Args:
             item (ItemData): Data from item... not used.
-        """        
+        """
         if self.asAnalysisCheck.isChecked():
             text = "Upload to Flywheel\nas Analysis"
         else:
