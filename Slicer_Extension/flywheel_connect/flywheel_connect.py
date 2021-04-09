@@ -24,7 +24,7 @@ from management.tree_management import TreeManagement
 
 # https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
 SLICER_DATA_FORMATS = {
-    "slicer_volumes": [
+    "volumes": [
         ".dcm",  # DICOM
         ".nrrd",  # NRRD
         ".nhdr",  # NRRD
@@ -53,7 +53,7 @@ SLICER_DATA_FORMATS = {
         ".mrc",
         ".rec",
     ],
-    "slicer_models": [
+    "models": [
         ".vtk",
         ".vtp",
         ".stl",
@@ -67,9 +67,9 @@ SLICER_DATA_FORMATS = {
         ".g",
         ".byu",
     ],
-    "slicer_fiducials": [".fcsv"],
-    "slicer_rulers": [".acsv"],
-    "slicer_transforms": [
+    "fiducials": [".fcsv"],
+    "rulers": [".acsv"],
+    "transforms": [
         ".h5",  # ITK Transforms
         ".tfm",  # ITK Transforms
         ".mat",  # Matlab Transforms
@@ -80,9 +80,9 @@ SLICER_DATA_FORMATS = {
         ".nii",  # Displacement Field
         ".nii.gz",  # Displacement Field
     ],
-    "slicer_transfer_functions": [".vp"],
-    "slicer_lookup_tables": [".ctbl"],
-    "slicer_double_arrays": [".mcsv"],
+    "transfer_functions": [".vp"],
+    "lookup_tables": [".ctbl"],
+    "double_arrays": [".mcsv"],
 }
 
 
@@ -338,40 +338,29 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
             self.segmentationButton.enabled = False
 
-    def is_volume(self, file_path):
+    def is_slicer_type(self, slicer_type, file_path):
         """
-        Check file_path for a 3D Slicer compatible volume file.
+        Checks file_path for the specified 3D Slicer compatible type.
 
         See https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
 
         Args:
+            slicer_type (str): Slicer-specific file type. Should be one of
+                volume, model, fiducial, ruler, transform,
+                transfer_function, lookup_table, double_array
             file_path (str): Path to cached file
 
         Returns:
-            boolean: True for supported volume type
+            boolean: True for file_path being slicer_type, False otherwise.
         """
+        plural_slicer_type = slicer_type + "s"
+        if plural_slicer_type not in SLICER_DATA_FORMATS.keys():
+            return False
 
-        for vol_type in SLICER_DATA_FORMATS["slicer_volumes"]:
-            if file_path.endswith(vol_type):
+        for slicer_ext in SLICER_DATA_FORMATS[plural_slicer_type]:
+            if file_path.endswith(slicer_ext):
                 return True
-        return False
 
-    def is_model(self, file_path):
-        """
-        Check file_path for a 3D Slicer compatible model file.
-
-        See https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
-
-        Args:
-            file_path (str): Path to cached file
-
-        Returns:
-            boolean: True for supported model type
-        """
-
-        for model_type in SLICER_DATA_FORMATS["slicer_models"]:
-            if file_path.endswith(model_type):
-                return True
         return False
 
     def is_compressed_dicom(self, file_path, file_type):
@@ -427,17 +416,48 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             file_path = file_dict["file_path"]
             file_type = file_dict["file_type"]
             # Check for volume
-            if self.is_volume(file_path):
+            if self.is_slicer_type("volume", file_path):
                 try:
                     slicer.util.loadVolume(file_path)
                 except Exception as e:
                     print("Not a valid Volume type.")
             # Check for model
-            elif self.is_model(file_path):
+            elif self.is_slicer_type("model", file_path):
                 try:
                     slicer.util.loadModel(file_path)
                 except Exception as e:
                     print("Not a valid Model type.")
+            elif self.is_slicer_type("fiducial", file_path):
+                try:
+                    slicer.util.loadFiducial(file_path)
+                except Exception as e:
+                    print("Not a valid Fiducial type.")
+            elif self.is_slicer_type("ruler", file_path):
+                try:
+                    slicer.util.loadRuler(file_path)
+                except Exception as e:
+                    print("Not a valid Ruler type.")
+            elif self.is_slicer_type("transform", file_path):
+                try:
+                    slicer.util.loadTransform, (file_path)
+                except Exception as e:
+                    print("Not a valid Transform type.")
+            elif self.is_slicer_type("transfer_function", file_path):
+                try:
+                    slicer.util.loadTransferFunction(file_path)
+                except Exception as e:
+                    print("Not a valid Transfer Function type.")
+            elif self.is_slicer_type("lookup_table", file_path):
+                try:
+                    slicer.util.loadFiducial(file_path)
+                except Exception as e:
+                    print("Not a valid Lookup Table type.")
+            elif self.is_slicer_type("double_array", file_path):
+                try:
+                    slicer.util.loadFiducial(file_path)
+                except Exception as e:
+                    print("Not a valid Double Array type.")
+
             # TODO: Add other Slicer datatypes.
             # Check for Flywheel compressed dicom
             elif self.is_compressed_dicom(file_path, file_type):
