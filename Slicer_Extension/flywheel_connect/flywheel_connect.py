@@ -429,36 +429,39 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                     print("Not a valid Model type.")
             elif self.is_slicer_type("fiducial", file_path):
                 try:
-                    slicer.util.loadFiducial(file_path)
+                    slicer.util.loadMarkupsFiducialList(file_path)
                 except Exception as e:
                     print("Not a valid Fiducial type.")
             elif self.is_slicer_type("ruler", file_path):
                 try:
-                    slicer.util.loadRuler(file_path)
+                    slicer.util.loadAnnotationRuler(file_path)
                 except Exception as e:
                     print("Not a valid Ruler type.")
             elif self.is_slicer_type("transform", file_path):
                 try:
-                    slicer.util.loadTransform, (file_path)
+                    slicer.util.loadTransform(file_path)
                 except Exception as e:
                     print("Not a valid Transform type.")
             elif self.is_slicer_type("transfer_function", file_path):
                 try:
-                    slicer.util.loadTransferFunction(file_path)
+                    # TODO: Test this
+                    filetype = "TransferFunctionFile"
+                    slicer.util.loadNodeFromFile(file_path, file_type)  
                 except Exception as e:
                     print("Not a valid Transfer Function type.")
             elif self.is_slicer_type("lookup_table", file_path):
                 try:
-                    slicer.util.loadFiducial(file_path)
+                    slicer.util.loadColorTable(file_path)
                 except Exception as e:
                     print("Not a valid Lookup Table type.")
             elif self.is_slicer_type("double_array", file_path):
                 try:
-                    slicer.util.loadFiducial(file_path)
+                    # TODO: Test this
+                    filetype = "DoubleArrayFile"
+                    slicer.util.loadNodeFromFile(file_path, file_type) 
                 except Exception as e:
                     print("Not a valid Double Array type.")
 
-            # TODO: Add other Slicer datatypes.
             # Check for Flywheel compressed dicom
             elif self.is_compressed_dicom(file_path, file_type):
                 try:
