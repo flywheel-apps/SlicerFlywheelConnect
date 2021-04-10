@@ -25,18 +25,18 @@ from management.tree_management import TreeManagement
 # https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
 SLICER_DATA_FORMATS = {
     "volumes": [
-        ".dcm",  # DICOM
-        ".nrrd",  # NRRD
-        ".nhdr",  # NRRD
-        ".mhd",  # MetaImage
-        ".mha",  # MetaImage
+        ".dcm",       # DICOM
+        ".nrrd",      # NRRD
+        ".nhdr",      # NRRD
+        ".mhd",       # MetaImage
+        ".mha",       # MetaImage
         ".vtk",
-        ".hdr",  # Analyze
-        ".img",  # Analyze
-        ".img.gz",  # Analyze
-        ".nia,",  # NIfTI
-        ".nii",  # NIfTI
-        ".nii.gz",  # NIfTI
+        ".hdr",       # Analyze
+        ".img",       # Analyze
+        ".img.gz",    # Analyze
+        ".nia,",      # NIfTI
+        ".nii",       # NIfTI
+        ".nii.gz",    # NIfTI
         ".bmp",
         ".pic",
         ".mask",
@@ -60,25 +60,25 @@ SLICER_DATA_FORMATS = {
         ".obj",
         ".orig",
         ".inflated",  # FreeSurfer
-        ".sphere",  # FreeSurfer
-        ".white",  # FreeSurfer
+        ".sphere",    # FreeSurfer
+        ".white",     # FreeSurfer
         ".smoothwm",  # FreeSurfer
-        ".pial",  # FreeSurfer
+        ".pial",      # FreeSurfer
         ".g",
         ".byu",
     ],
     "fiducials": [".fcsv"],
     "rulers": [".acsv"],
     "transforms": [
-        ".h5",  # ITK Transforms
-        ".tfm",  # ITK Transforms
-        ".mat",  # Matlab Transforms
-        ".nrrd",  # Displacement Field
-        ".nhdr",  # Displacement Field
-        ".mha",  # Displacement Field
-        ".mhd",  # Displacement Field
-        ".nii",  # Displacement Field
-        ".nii.gz",  # Displacement Field
+        ".h5",        # ITK Transforms
+        ".tfm",       # ITK Transforms
+        ".mat",       # Matlab Transforms
+        ".nrrd",      # Displacement Field
+        ".nhdr",      # Displacement Field
+        ".mha",       # Displacement Field
+        ".mhd",       # Displacement Field
+        ".nii",       # Displacement Field
+        ".nii.gz",    # Displacement Field
     ],
     "transfer_functions": [".vp"],
     "lookup_tables": [".ctbl"],
