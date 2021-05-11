@@ -4,10 +4,25 @@ set(MODULE_NAME flywheel_connect)
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
+  management/__init__.py
+  management/fw_container_items.py
+  management/tree_management.py
   )
 
 set(MODULE_PYTHON_RESOURCES
   Resources/Icons/${MODULE_NAME}.png
+  Resources/Icons/acquisition.png
+  Resources/Icons/analysis.png
+  Resources/Icons/app_viewer_screenshot.png
+  Resources/Icons/download.png
+  Resources/Icons/dwnld-folder.png
+  Resources/Icons/file.png
+  Resources/Icons/file_cached.png
+  Resources/Icons/folder.png
+  Resources/Icons/group.png
+  Resources/Icons/project.png
+  Resources/Icons/session.png
+  Resources/Icons/subject.png 
   )
 
 #-----------------------------------------------------------------------------
