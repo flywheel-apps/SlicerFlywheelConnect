@@ -29,38 +29,31 @@ class flywheel_connect(ScriptedLoadableModule):
     """
 
     def __init__(self, parent):
+        ScriptedLoadableModule.__init__(self, parent)
+        # TODO make this more human readable by adding spaces
+        self.parent.title = "Flywheel Connect"
+        self.parent.categories = ["Flywheel"]
+        self.parent.dependencies = []
+        self.parent.contributors = ["Joshua Jacobs (flywheel.io)"]
+        self.parent.helpText = 'See <a href="https://github.com/flywheel-apps/SlicerFlywheelConnect">Flywheel Connect website</a> for more information.'
+        self.parent.helpText += self.getDefaultModuleDocumentationLink()
+        self.parent.acknowledgementText = ""
+
+        slicer.app.connect("startupCompleted()", self.onStartupCompleted)
+
+    def onStartupCompleted(self):
         FlyW = ""
         try:
             FlyW = import_module("flywheel")
-        except Exception:
-            slicer.util.pip_install("flywheel-sdk")
-            FlyW = import_module("flywheel")
+        except ModuleNotFoundError as e:
+            if slicer.util.confirmOkCancelDisplay("Flywheel Connect requires 'flywheel-sdk' Python package. Click OK to install it now."):
+                slicer.util.pip_install("flywheel-sdk")
+                FlyW = import_module("flywheel")
         globals()["flywheel"] = FlyW
-
-        ScriptedLoadableModule.__init__(self, parent)
-        # TODO make this more human readable by adding spaces
-        self.parent.title = "flywheel_connect"
-        self.parent.categories = ["Flywheel"]
-        self.parent.dependencies = []
-        # replace with "Firstname Lastname (Organization)"
-        self.parent.contributors = ["Joshua Jacobs (flywheel.io)"]
-        self.parent.helpText = (
-            "This is an example of scripted loadable module bundled in an extension."
-            "It performs a simple thresholding on the input volume and optionally"
-            "captures a screenshot."
-        )
-        self.parent.helpText += self.getDefaultModuleDocumentationLink()
-        self.parent.acknowledgementText = (
-            "This file was originally developed by Jean-Christophe Fillion-Robin,"
-            "Kitware Inc. and Steve Pieper, Isomics, Inc. and was partially funded"
-            "by NIH grant 3P41RR013218-12S1."
-        )  # replace with organization, grant and thanks.
-
 
 #
 # flywheel_connectWidget
 #
-
 
 class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     """Uses ScriptedLoadableModuleWidget base class, available at:
@@ -204,7 +197,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     def onConnectAPIPushed(self):
         """
         Connect to a Flywheel instance for valid api-key.
-        """        
+        """
         try:
             # Instantiate and connect widgets ...
             if self.apiKeyTextBox.text:
@@ -239,7 +232,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
         Args:
             item (str): Group name or empty string
-        """        
+        """
         if item:
             group_id = self.groupSelector.currentData
             self.group = self.fw_client.get(group_id)
@@ -255,7 +248,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
         Args:
             item (str): Name of project or empty string
-        """        
+        """
         tree_rows = self.tree_management.source_model.rowCount()
         if item:
             project_id = self.projectSelector.currentData
@@ -275,71 +268,6 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
             self.segmentationButton.enabled = False
 
-
-    def is_volume(self, file_path):
-        """
-        Check file_path for a 3D Slicer compatible volume file.
-
-        See https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
-
-        Args:
-            file_path (str): Path to cached file
-
-        Returns:
-            boolean: True for supported volume type
-        """
-
-        valid_slicer_volumes = [
-            ".dcm", # DICOM
-            ".nrrd", ".nhdr", # NRRD
-            ".mhd", ".mha", # MetaImage
-            ".vtk",
-            ".hdr", ".img", ".img.gz", # Analyze
-            ".nia,", ".nii", ".nii.gz", # NIfTI
-            ".bmp", 
-            ".pic",
-            ".mask",
-            ".gipl", ".gipl.gz",
-            ".jpg", ".jpeg",
-            ".lsm",
-            ".png",
-            ".spr",
-            ".tif", ".tiff",
-            ".mgz",
-            ".mrc", ".rec" 
-        ]
-        for vol_type in valid_slicer_volumes:
-            if file_path.endswith(vol_type):
-                return True
-        return False
-
-    def is_model(self, file_path):
-        """
-        Check file_path for a 3D Slicer compatible model file.
-
-        See https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
-
-        Args:
-            file_path (str): Path to cached file
-
-        Returns:
-            boolean: True for supported model type
-        """
-
-        valid_slicer_models = [
-            ".vtk",
-            ".vtp",
-            ".stl",
-            ".obj",
-            ".orig", 
-            ".inflated", ".sphere", ".white", ".smoothwm", ".pial", # FreeSurfer
-            ".g", ".byu",
-        ]
-        for model_type in valid_slicer_models:
-            if file_path.endswith(model_type):
-                return True
-        return False        
-
     def is_compressed_dicom(self, file_path, file_type):
         """
         Check file_path and file_type for a flywheel compressed dicom archive.
@@ -349,11 +277,11 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             file_type (str): Type of Flywheel file
 
         Returns:
-            boolean: True for supported compressed dicom type 
-        """        
+            boolean: True for supported compressed dicom type
+        """
         if file_path.endswith(".zip") and file_type=="dicom":
             return True
-        
+
         return False
 
     def load_dicom_archive(self, file_path):
@@ -364,7 +292,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             file_path (str): path to the cached dicom archive.
 
         https://discourse.slicer.org/t/fastest-way-to-load-dicom/9317/2
-        """        
+        """
         with tempfile.TemporaryDirectory() as dicomDataDir:
             dicom_zip = ZipFile(file_path)
             dicom_zip.extractall(path=dicomDataDir)
@@ -376,7 +304,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     def onLoadFilesPushed(self):
         """
         Load tree-selected files into 3D Slicer for viewing.
-        """        
+        """
 
         # If Cache not checked, delete CacheDir recursively
         if not self.useCacheCheckBox.checkState():
@@ -390,25 +318,16 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         for k, file_dict in self.tree_management.cache_files.items():
             file_path = file_dict["file_path"]
             file_type = file_dict["file_type"]
-            # Check for volume
-            if self.is_volume(file_path):
-                try:
-                    slicer.util.loadVolume(file_path)
-                except Exception as e:
-                    print("Not a valid Volume type.")
-            # Check for model
-            elif self.is_model(file_path):
-                try:
-                    slicer.util.loadModel(file_path)
-                except Exception as e:
-                    print("Not a valid Model type.")
-            # TODO: Add other Slicer datatypes.
             # Check for Flywheel compressed dicom
-            elif self.is_compressed_dicom(file_path, file_type):
+            if self.is_compressed_dicom(file_path, file_type):
                 try:
                     self.load_dicom_archive(file_path)
+                    continue
                 except Exception as e:
                     print("Not a valid DICOM archive.")
+            # Load using Slicer default node reader
+            if not slicer.app.ioManager().loadFile(file_path):
+                print("Failed to read file: "+file_path)
 
     def save_analysis(self, parent_container_item, output_path):
         """
@@ -418,7 +337,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             parent_container_item (ContainerItem): Tree Item representation of parent
                 container.
             output_path (Path): Temporary path to where Slicer files are saved.
-        """        
+        """
         parent_container = self.fw_client.get(parent_container_item.data())
 
         # Get all cached paths represented in Slicer
@@ -468,7 +387,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             parent_container_item (ContainerItem):  Tree Item representation of parent
                 container.
             output_path (Path): Temporary path to where Slicer files are saved.
-        """        
+        """
         parent_container = self.fw_client.get(parent_container_item.data()).reload()
         parent_container_files = [fl.name for fl in parent_container.files]
         for output_file in [
@@ -483,9 +402,9 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
     def save_scene_to_flywheel(self):
         """
-        Save selected files in the current Slicer scene to a Flywheel Analysis or 
+        Save selected files in the current Slicer scene to a Flywheel Analysis or
         Container.
-        """        
+        """
         with tempfile.TemporaryDirectory() as tmp_output_path:
             output_path = Path(tmp_output_path)
             slicer.mrmlScene.SetRootDirectory(str(output_path))
@@ -498,7 +417,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                     self.save_analysis(container_item, output_path)
                 else:
                     self.save_files_to_container(container_item, output_path)
-            
+
             # Remove storage nodes with the tmp_output_path in them
             for node in [
                 node
@@ -513,7 +432,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
 
         Args:
             item (ItemData): Data from item... not used.
-        """        
+        """
         if self.asAnalysisCheck.isChecked():
             text = "Upload to Flywheel\nas Analysis"
         else:
