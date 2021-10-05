@@ -6,7 +6,7 @@ A 3D Slicer Extension to view, select, and download images from a Flywheel insta
 Flywheel is a comprehensive data management solutions for life sciences and imaging research.
 More details at [https://flywheel.io/](https://flywheel.io/).
 
-The Flywheel Connect 3D Slicer Extension is now in the [3D Slicer Extension Catalog](https://slicer.kitware.com/midas3/slicerappstore/extension/view?extensionId=460488) and available through the [3D Slicer Extensions Manager](https://slicer.readthedocs.io/en/latest/user_guide/extensions_manager.html) for direct installation.
+The Flywheel Connect 3D Slicer Extension is now in the [3D Slicer Extension Catalog](https://extensions.slicer.org/view/flywheel_connect/30117/linux) and available through the [3D Slicer Extensions Manager](https://slicer.readthedocs.io/en/latest/user_guide/extensions_manager.html) for direct installation.
 
 ## Usage Instructions
 
