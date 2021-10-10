@@ -29,8 +29,7 @@ class flywheel_connect(ScriptedLoadableModule):
     """
 
     def __init__(self, parent):
-        ScriptedLoadableModule.__init__(self, parent)
-        # TODO make this more human readable by adding spaces
+        super(flywheel_connect, self).__init__(parent)
         self.parent.title = "Flywheel Connect"
         self.parent.categories = ["Flywheel"]
         self.parent.dependencies = []
@@ -39,14 +38,17 @@ class flywheel_connect(ScriptedLoadableModule):
         self.parent.helpText += self.getDefaultModuleDocumentationLink()
         self.parent.acknowledgementText = ""
 
-        slicer.app.connect("startupCompleted()", self.onStartupCompleted)
+        slicer.app.connect("startupCompleted()", self.on_startup_completed)
 
-    def onStartupCompleted(self):
+    def on_startup_completed(self):
         FlyW = ""
         try:
             FlyW = import_module("flywheel")
         except ModuleNotFoundError as e:
-            if slicer.util.confirmOkCancelDisplay("Flywheel Connect requires 'flywheel-sdk' Python package. Click OK to install it now."):
+            if slicer.util.confirmOkCancelDisplay(
+                "Flywheel Connect requires 'flywheel-sdk' Python package. "
+                "Click OK to install it now."
+            ):
                 slicer.util.pip_install("flywheel-sdk")
                 FlyW = import_module("flywheel")
         globals()["flywheel"] = FlyW
@@ -64,7 +66,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         """
         Initialize all form elements
         """
-        ScriptedLoadableModuleWidget.setup(self)
+        super(flywheel_connectWidget, self).setup()
 
         # Declare Cache path
         self.CacheDir = os.path.expanduser("~") + "/flywheelIO/"
@@ -265,8 +267,6 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             if tree_rows > 0:
                 self.tree_management.source_model.removeRows(0, tree_rows)
             self.loadFilesButton.enabled = False
-
-            self.segmentationButton.enabled = False
 
     def is_compressed_dicom(self, file_path, file_type):
         """
