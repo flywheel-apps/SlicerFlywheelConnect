@@ -30,7 +30,7 @@ SLICER_DATA_FORMATS = {
         ".nhdr",      # NRRD
         ".mhd",       # MetaImage
         ".mha",       # MetaImage
-        ".vtk",
+        ".vtk",       # vtkVolume
         ".hdr",       # Analyze
         ".img",       # Analyze
         ".img.gz",    # Analyze
@@ -54,11 +54,11 @@ SLICER_DATA_FORMATS = {
         ".rec",
     ],
     "models": [
-        ".vtk",
+        ".vtk",       # vtkPolyData
         ".vtp",
         ".stl",
         ".obj",
-        ".orig",
+        ".orig",      # FreeSurfer
         ".inflated",  # FreeSurfer
         ".sphere",    # FreeSurfer
         ".white",     # FreeSurfer
@@ -67,7 +67,11 @@ SLICER_DATA_FORMATS = {
         ".g",
         ".byu",
     ],
-    "fiducials": [".fcsv"],
+    "fiducials": [
+        ".fcsv",
+        ".mrk.json",
+        ".json"
+        ],
     "rulers": [".acsv"],
     "transforms": [
         ".h5",        # ITK Transforms
@@ -92,38 +96,33 @@ class flywheel_connect(ScriptedLoadableModule):
     """
 
     def __init__(self, parent):
+        super(flywheel_connect, self).__init__(parent)
+        self.parent.title = "Flywheel Connect"
+        self.parent.categories = ["Flywheel"]
+        self.parent.dependencies = []
+        self.parent.contributors = ["Joshua Jacobs (flywheel.io)"]
+        self.parent.helpText = 'See <a href="https://github.com/flywheel-apps/SlicerFlywheelConnect">Flywheel Connect website</a> for more information.'
+        self.parent.helpText += self.getDefaultModuleDocumentationLink()
+        self.parent.acknowledgementText = ""
+
+        slicer.app.connect("startupCompleted()", self.on_startup_completed)
+
+    def on_startup_completed(self):
         FlyW = ""
         try:
             FlyW = import_module("flywheel")
-        except Exception:
-            slicer.util.pip_install("flywheel-sdk")
-            FlyW = import_module("flywheel")
+        except ModuleNotFoundError as e:
+            if slicer.util.confirmOkCancelDisplay(
+                "Flywheel Connect requires 'flywheel-sdk' Python package. "
+                "Click OK to install it now."
+            ):
+                slicer.util.pip_install("flywheel-sdk")
+                FlyW = import_module("flywheel")
         globals()["flywheel"] = FlyW
-
-        ScriptedLoadableModule.__init__(self, parent)
-        # TODO make this more human readable by adding spaces
-        self.parent.title = "flywheel_connect"
-        self.parent.categories = ["Flywheel"]
-        self.parent.dependencies = []
-        # replace with "Firstname Lastname (Organization)"
-        self.parent.contributors = ["Joshua Jacobs (flywheel.io)"]
-        self.parent.helpText = (
-            "This is an example of scripted loadable module bundled in an extension."
-            "It performs a simple thresholding on the input volume and optionally"
-            "captures a screenshot."
-        )
-        self.parent.helpText += self.getDefaultModuleDocumentationLink()
-        self.parent.acknowledgementText = (
-            "This file was originally developed by Jean-Christophe Fillion-Robin,"
-            "Kitware Inc. and Steve Pieper, Isomics, Inc. and was partially funded"
-            "by NIH grant 3P41RR013218-12S1."
-        )  # replace with organization, grant and thanks.
-
 
 #
 # flywheel_connectWidget
 #
-
 
 class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     """Uses ScriptedLoadableModuleWidget base class, available at:
@@ -134,7 +133,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         """
         Initialize all form elements
         """
-        ScriptedLoadableModuleWidget.setup(self)
+        super(flywheel_connectWidget, self).setup()
 
         # Declare Cache path
         self.CacheDir = os.path.expanduser("~") + "/flywheelIO/"
@@ -415,6 +414,8 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         for k, file_dict in self.tree_management.cache_files.items():
             file_path = file_dict["file_path"]
             file_type = file_dict["file_type"]
+            # TODO: How do we cascade on different file-types
+            #       e.g. check "model" if "volume" has failed?
             # Check for volume
             if self.is_slicer_type("volume", file_path):
                 try:
@@ -463,11 +464,15 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                     print("Not a valid Double Array type.")
 
             # Check for Flywheel compressed dicom
-            elif self.is_compressed_dicom(file_path, file_type):
+            if self.is_compressed_dicom(file_path, file_type):
                 try:
                     self.load_dicom_archive(file_path)
+                    continue
                 except Exception as e:
                     print("Not a valid DICOM archive.")
+            # Load using Slicer default node reader
+            if not slicer.app.ioManager().loadFile(file_path):
+                print("Failed to read file: "+file_path)
 
     def save_analysis(self, parent_container_item, output_path):
         """

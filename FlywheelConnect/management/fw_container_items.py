@@ -25,7 +25,7 @@ class FolderItem(QtGui.QStandardItem):
         icon = QtGui.QIcon(str(self.source_dir / icon_path))
         self.parent_item = parent_item
         self.parent_container = parent_item.container
-        self.folderItem = QtGui.QStandardItem()
+        self.folder_item = QtGui.QStandardItem()
         self.setText(folder_name)
         self.setIcon(icon)
         parent_item.appendRow(self)
@@ -128,7 +128,7 @@ class ContainerItem(QtGui.QStandardItem):
         Create a folder with the name of the child containers (e.g. SESSIONS)
         """
         if hasattr(self, "child_container_name"):
-            self.folderItem = FolderItem(self, self.child_container_name)
+            self.folder_item = FolderItem(self, self.child_container_name)
 
     def _on_expand(self):
         """
@@ -160,9 +160,9 @@ class GroupItem(ContainerItem):
         """
         Populate with flywheel projects.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for project in self.group.projects():
-                ProjectItem(self.folderItem, project)
+                ProjectItem(self.folder_item, project)
 
     def _on_expand(self):
         """
@@ -196,9 +196,9 @@ class ProjectItem(ContainerItem):
         """
         Populate with flywheel subjects.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for subject in self.project.subjects():
-                SubjectItem(self.folderItem, subject)
+                SubjectItem(self.folder_item, subject)
 
     def _on_expand(self):
         """
@@ -232,9 +232,9 @@ class SubjectItem(ContainerItem):
         """
         Populate with flywheel sessions.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for session in self.subject.sessions():
-                SessionItem(self.folderItem, session)
+                SessionItem(self.folder_item, session)
 
     def _on_expand(self):
         """
@@ -268,9 +268,9 @@ class SessionItem(ContainerItem):
         """
         Populate with flywheel acquisitions.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for acquisition in self.session.acquisitions():
-                AcquisitionItem(self.folderItem, acquisition)
+                AcquisitionItem(self.folder_item, acquisition)
 
     def _on_expand(self):
         """
