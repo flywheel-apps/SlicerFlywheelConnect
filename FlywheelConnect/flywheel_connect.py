@@ -22,6 +22,73 @@ from management.tree_management import TreeManagement
 # flywheel_connect
 #
 
+# https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
+SLICER_DATA_FORMATS = {
+    "volumes": [
+        ".dcm",       # DICOM
+        ".nrrd",      # NRRD
+        ".nhdr",      # NRRD
+        ".mhd",       # MetaImage
+        ".mha",       # MetaImage
+        ".vtk",       # vtkVolume
+        ".hdr",       # Analyze
+        ".img",       # Analyze
+        ".img.gz",    # Analyze
+        ".nia,",      # NIfTI
+        ".nii",       # NIfTI
+        ".nii.gz",    # NIfTI
+        ".bmp",
+        ".pic",
+        ".mask",
+        ".gipl",
+        ".gipl.gz",
+        ".jpg",
+        ".jpeg",
+        ".lsm",
+        ".png",
+        ".spr",
+        ".tif",
+        ".tiff",
+        ".mgz",
+        ".mrc",
+        ".rec",
+    ],
+    "models": [
+        ".vtk",       # vtkPolyData
+        ".vtp",
+        ".stl",
+        ".obj",
+        ".orig",      # FreeSurfer
+        ".inflated",  # FreeSurfer
+        ".sphere",    # FreeSurfer
+        ".white",     # FreeSurfer
+        ".smoothwm",  # FreeSurfer
+        ".pial",      # FreeSurfer
+        ".g",
+        ".byu",
+    ],
+    "fiducials": [
+        ".fcsv",
+        ".mrk.json",
+        ".json"
+        ],
+    "rulers": [".acsv"],
+    "transforms": [
+        ".h5",        # ITK Transforms
+        ".tfm",       # ITK Transforms
+        ".mat",       # Matlab Transforms
+        ".nrrd",      # Displacement Field
+        ".nhdr",      # Displacement Field
+        ".mha",       # Displacement Field
+        ".mhd",       # Displacement Field
+        ".nii",       # Displacement Field
+        ".nii.gz",    # Displacement Field
+    ],
+    "transfer_functions": [".vp"],
+    "lookup_tables": [".ctbl"],
+    "double_arrays": [".mcsv"],
+}
+
 
 class flywheel_connect(ScriptedLoadableModule):
     """Uses ScriptedLoadableModule base class, available at:
@@ -268,6 +335,33 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                 self.tree_management.source_model.removeRows(0, tree_rows)
             self.loadFilesButton.enabled = False
 
+            self.segmentationButton.enabled = False
+
+    def is_slicer_type(self, slicer_type, file_path):
+        """
+        Checks file_path for the specified 3D Slicer compatible type.
+
+        See https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
+
+        Args:
+            slicer_type (str): Slicer-specific file type. Should be one of
+                volume, model, fiducial, ruler, transform,
+                transfer_function, lookup_table, double_array
+            file_path (str): Path to cached file
+
+        Returns:
+            boolean: True for file_path being slicer_type, False otherwise.
+        """
+        plural_slicer_type = slicer_type + "s"
+        if plural_slicer_type not in SLICER_DATA_FORMATS.keys():
+            return False
+
+        for slicer_ext in SLICER_DATA_FORMATS[plural_slicer_type]:
+            if file_path.endswith(slicer_ext):
+                return True
+
+        return False
+
     def is_compressed_dicom(self, file_path, file_type):
         """
         Check file_path and file_type for a flywheel compressed dicom archive.
@@ -279,7 +373,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         Returns:
             boolean: True for supported compressed dicom type
         """
-        if file_path.endswith(".zip") and file_type=="dicom":
+        if file_path.endswith(".zip") and file_type == "dicom":
             return True
 
         return False
@@ -298,7 +392,9 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             dicom_zip.extractall(path=dicomDataDir)
             DICOMLib.importDicom(dicomDataDir)
             dicomFiles = slicer.util.getFilesInDirectory(dicomDataDir)
-            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists([dicomFiles])
+            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists(
+                [dicomFiles]
+            )
             loadedNodeIDs = DICOMLib.loadLoadables(loadablesByPlugin)
 
     def onLoadFilesPushed(self):
@@ -318,6 +414,55 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         for k, file_dict in self.tree_management.cache_files.items():
             file_path = file_dict["file_path"]
             file_type = file_dict["file_type"]
+            # TODO: How do we cascade on different file-types
+            #       e.g. check "model" if "volume" has failed?
+            # Check for volume
+            if self.is_slicer_type("volume", file_path):
+                try:
+                    slicer.util.loadVolume(file_path)
+                except Exception as e:
+                    print("Not a valid Volume type.")
+            # Check for model
+            elif self.is_slicer_type("model", file_path):
+                try:
+                    slicer.util.loadModel(file_path)
+                except Exception as e:
+                    print("Not a valid Model type.")
+            elif self.is_slicer_type("fiducial", file_path):
+                try:
+                    slicer.util.loadMarkupsFiducialList(file_path)
+                except Exception as e:
+                    print("Not a valid Fiducial type.")
+            elif self.is_slicer_type("ruler", file_path):
+                try:
+                    slicer.util.loadAnnotationRuler(file_path)
+                except Exception as e:
+                    print("Not a valid Ruler type.")
+            elif self.is_slicer_type("transform", file_path):
+                try:
+                    slicer.util.loadTransform(file_path)
+                except Exception as e:
+                    print("Not a valid Transform type.")
+            elif self.is_slicer_type("transfer_function", file_path):
+                try:
+                    # TODO: Test this
+                    filetype = "TransferFunctionFile"
+                    slicer.util.loadNodeFromFile(file_path, file_type)  
+                except Exception as e:
+                    print("Not a valid Transfer Function type.")
+            elif self.is_slicer_type("lookup_table", file_path):
+                try:
+                    slicer.util.loadColorTable(file_path)
+                except Exception as e:
+                    print("Not a valid Lookup Table type.")
+            elif self.is_slicer_type("double_array", file_path):
+                try:
+                    # TODO: Test this
+                    filetype = "DoubleArrayFile"
+                    slicer.util.loadNodeFromFile(file_path, file_type) 
+                except Exception as e:
+                    print("Not a valid Double Array type.")
+
             # Check for Flywheel compressed dicom
             if self.is_compressed_dicom(file_path, file_type):
                 try:
@@ -408,7 +553,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         with tempfile.TemporaryDirectory() as tmp_output_path:
             output_path = Path(tmp_output_path)
             slicer.mrmlScene.SetRootDirectory(str(output_path))
-            slicer.mrmlScene.SetURL(str(output_path/"Slicer_Scene.mrml"))
+            slicer.mrmlScene.SetURL(str(output_path / "Slicer_Scene.mrml"))
             if slicer.util.openSaveDataDialog():
                 index = self.treeView.selectedIndexes()[0]
                 container_item = self.tree_management.source_model.itemFromIndex(index)
