@@ -38,7 +38,7 @@ The interface is shown below. Notable areas are commented on:
 * G) Files that are cached will have a green "badge". Right-clicking on selected files will enable them to be cached. Some downloads are large.
 * H) Load all selected files. Files that are Slicer-supported data formats (Images and Models) will be loaded. This will only be enabled if files are selected.
 * I) Upload derived files to Flywheel Analysis or Container files. This will only be enabled if a single valid Flywheel Container is selected.
-* H) If checked, indicates that derived files should be uploaded to Flywheel as Analysis output under the selected Container.
+* J) If checked, indicates that derived files should be uploaded to Flywheel as Analysis output under the selected Container.
 
 ## ToDo
 - [ ] Ensure that a created analysis downloads the necessary files to the cache if they are not already there.
