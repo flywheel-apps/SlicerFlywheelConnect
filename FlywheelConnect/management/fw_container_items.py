@@ -389,7 +389,7 @@ class FileItem(ContainerItem):
         file_parent = self.parent_item.parent().container
         fl_ext = self.container.name.split(".")[-1]
         paired_ext = PAIRED_FILE_TYPES[fl_ext]
-        paired_file_name = self.container.name[:-len(fl_ext)] + "." + paired_ext
+        paired_file_name = self.container.name[:-len(fl_ext)] + paired_ext
 
         # file definition is retrieved or a None is returned.
         if file_parent.get_file(paired_file_name):
