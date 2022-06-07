@@ -266,8 +266,6 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                 self.tree_management.source_model.removeRows(0, tree_rows)
             self.loadFilesButton.enabled = False
 
-            self.segmentationButton.enabled = False
-
     def is_compressed_dicom(self, file_path, file_type):
         """
         Check file_path and file_type for a flywheel compressed dicom archive.

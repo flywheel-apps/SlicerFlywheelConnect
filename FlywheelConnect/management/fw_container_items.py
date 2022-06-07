@@ -5,6 +5,11 @@ from PythonQt import QtGui
 from PythonQt.QtCore import Qt
 from qt import QAbstractItemView
 
+# Common paired file types
+PAIRED_FILE_TYPES = {
+    "mhd": "raw",
+    "hdr": "img"
+}
 
 class FolderItem(QtGui.QStandardItem):
     """
@@ -365,6 +370,33 @@ class FileItem(ContainerItem):
         file_path /= self.container.name
         return file_path
 
+    def _is_paired_type(self):
+        """
+        Determine if this file is of a paired type.
+
+        Returns:
+            bool: True or False of paired type.
+        """        
+        return self.container.name.split(".")[-1] in PAIRED_FILE_TYPES.keys()
+
+    def _get_paired_file(self):
+        """
+        Get the pair of current file, if exists
+
+        Returns:
+            str: Name of paired file
+        """        
+        file_parent = self.parent_item.parent().container
+        fl_ext = self.container.name.split(".")[-1]
+        paired_ext = PAIRED_FILE_TYPES[fl_ext]
+        paired_file_name = self.container.name[:-len(fl_ext)] + paired_ext
+
+        # file definition is retrieved or a None is returned.
+        if file_parent.get_file(paired_file_name):
+            return paired_file_name
+        else:
+            return None
+
     def _is_cached(self):
         """
         Check if file is cached.
@@ -383,6 +415,7 @@ class FileItem(ContainerItem):
         """
         file_path = self._get_cache_path()
         file_parent = self.parent_item.parent().container
+
         if not file_path.exists():
             if not file_path.parents[0].exists():
                 os.makedirs(file_path.parents[0])
@@ -390,4 +423,12 @@ class FileItem(ContainerItem):
             self.icon_path = "Resources/Icons/file_cached.png"
             self.setToolTip("File is cached.")
             self._set_icon()
+        # Check if this file is of a paired type
+        if self._is_paired_type():
+            # attempt to find the paired type
+            paired_file_name = self._get_paired_file()
+            # if found, download the adjoining pair into original directory
+            if paired_file_name:
+                file_parent.download_file(paired_file_name, str(file_path.parents[0]/paired_file_name))
+
         return file_path, self.file_type

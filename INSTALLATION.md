@@ -11,3 +11,6 @@ Follow these steps to run a local copy of the extension:
 1. Clone this github repository into a convenient location
 2. Add the FlywheelConnect subfolder of the repository as an additional module path (in menu: Edit / Application settings -> Modules -> Additional module paths; either drag-and-drop the FlywheelConnect folder to the path list, or click the double-arrow button and then click Add and select the FlywheelConnect folder)
 3. Restart the application
+
+## Bonus
+In place of (2) above, install the DeveloperToolsForExtensions Extension and locate the FlywheelConnect folder in the Extension Wizard.
