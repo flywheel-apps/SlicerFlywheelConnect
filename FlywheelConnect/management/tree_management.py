@@ -5,6 +5,7 @@ from qt import QAbstractItemView, QItemSelectionModel, QMenu
 from .fw_container_items import (
     AnalysisFolderItem,
     AnalysisItem,
+    CollectionItem,
     ContainerItem,
     FileItem,
     GroupItem,
@@ -70,6 +71,12 @@ class TreeManagement:
         groups = self.main_window.fw_client.groups()
         for group in groups:
             group_item = GroupItem(self.source_model, group)
+
+    def populateTreeFromCollection(self, collection):
+        """
+        Populate Tree from a single Collection
+        """
+        collection_item = CollectionItem(self.source_model, collection)
 
     def populateTreeFromProject(self, project):
         """

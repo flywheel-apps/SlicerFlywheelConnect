@@ -1,16 +1,16 @@
-import shutil
 import datetime
 import logging
 import os
 import os.path as op
+import shutil
 import tempfile
 from glob import glob
-from zipfile import ZipFile
 from importlib import import_module
 from pathlib import Path
+from zipfile import ZipFile
 
-import DICOMLib
 import ctk
+import DICOMLib
 import qt
 import slicer
 import vtk
@@ -39,21 +39,26 @@ class flywheel_connect(ScriptedLoadableModule):
         self.parent.helpText += self.getDefaultModuleDocumentationLink()
         self.parent.acknowledgementText = ""
 
-        slicer.app.connect("startupCompleted()", self.onStartupCompleted)
+        slicer.app.connect("startupCompleted()", self.on_startup_completed)
 
-    def onStartupCompleted(self):
+    def on_startup_completed(self):
         FlyW = ""
         try:
             FlyW = import_module("flywheel")
         except ModuleNotFoundError as e:
-            if slicer.util.confirmOkCancelDisplay("Flywheel Connect requires 'flywheel-sdk' Python package. Click OK to install it now."):
+            if slicer.util.confirmOkCancelDisplay(
+                "Flywheel Connect requires 'flywheel-sdk' Python package. "
+                "Click OK to install it now."
+            ):
                 slicer.util.pip_install("flywheel-sdk")
                 FlyW = import_module("flywheel")
         globals()["flywheel"] = FlyW
 
+
 #
 # flywheel_connectWidget
 #
+
 
 class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     """Uses ScriptedLoadableModuleWidget base class, available at:
@@ -64,7 +69,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         """
         Initialize all form elements
         """
-        ScriptedLoadableModuleWidget.setup(self)
+        super(flywheel_connectWidget, self).setup()
 
         # Declare Cache path
         self.CacheDir = os.path.expanduser("~") + "/flywheelIO/"
@@ -123,6 +128,33 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         dataFormLayout = qt.QFormLayout(self.dataCollapsibleGroupBox)
 
         #
+        #  collection toggle button
+        #
+
+        # TODO: Remove useCollectionCheckBox after review of functionality/look/feel.
+
+        # self.useCollectionCheckBox = qt.QCheckBox("Browse Collections")
+        # self.useCollectionCheckBox.toolTip = (
+        #     """Browse Flywheel Collecions. Otherwise, browse projects."""
+        # )
+
+        # self.useCollectionCheckBox.setCheckState(False)
+        # self.useCollectionCheckBox.setTristate(False)
+
+        # dataFormLayout.addWidget(self.useCollectionCheckBox)
+
+        self.radioButtonGroup = qt.QButtonGroup()
+        self.useCollections = qt.QRadioButton("Browse Collections")
+        self.useProjects = qt.QRadioButton("Browse Groups and Projects")
+        self.radioButtonGroup.addButton(self.useCollections)
+        self.radioButtonGroup.addButton(self.useProjects)
+        self.useProjects.setChecked(True)
+        self.useProjects.enabled = False
+        self.useCollections.enabled = False
+        dataFormLayout.addWidget(self.useProjects)
+        dataFormLayout.addWidget(self.useCollections)
+
+        #
         # group Selector ComboBox
         #
         self.groupSelectorLabel = qt.QLabel("Current group:")
@@ -145,6 +177,17 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         self.projectSelector.enabled = False
         self.projectSelector.setMinimumWidth(200)
         dataFormLayout.addWidget(self.projectSelector)
+
+        #
+        # collection Selector ComboBox
+        #
+
+        # Selector ComboBox
+        self.collectionSelector = qt.QComboBox()
+        self.collectionSelector.enabled = False
+        self.collectionSelector.visible = False
+        self.collectionSelector.setMinimumWidth(200)
+        dataFormLayout.addWidget(self.collectionSelector)
 
         # TreeView for Single Projects containers:
         self.treeView = qt.QTreeView()
@@ -179,6 +222,14 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         # ################# Connect form elements #######################
         self.connectAPIButton.connect("clicked(bool)", self.onConnectAPIPushed)
 
+        # self.useCollectionCheckBox.connect("clicked(bool)", self.onUseCollectionChecked)
+        self.useCollections.connect("clicked(bool)", self.onProjectsOrCollections)
+        self.useProjects.connect("clicked(bool)", self.onProjectsOrCollections)
+
+        self.collectionSelector.connect(
+            "currentIndexChanged(QString)", self.onCollectionSelected
+        )
+
         self.groupSelector.connect("currentIndexChanged(QString)", self.onGroupSelected)
 
         self.projectSelector.connect(
@@ -210,6 +261,18 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                 f"You are logged in as {fw_user} to {fw_site}"
             )
             # if client valid: TODO
+
+            self.useProjects.enabled = True
+            self.useCollections.enabled = True
+            # initialize collections
+            collections = self.fw_client.collections()
+            self.collectionSelector.enabled = False
+            self.collectionSelector.clear()
+            for collection in collections:
+                self.collectionSelector.addItem(collection.label, collection.id)
+            self.useProjects.setChecked(True)
+
+            # initialize groups and projects
             groups = self.fw_client.groups()
             self.groupSelector.enabled = True
             self.groupSelector.clear()
@@ -224,7 +287,77 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             self.apiKeyTextBox.clear()
             self.projectSelector.clear()
             self.projectSelector.enabled = False
+            self.collectionSelector.clear()
+            self.collectionSelector.enabled = False
             slicer.util.errorDisplay(e)
+
+    def onProjectsOrCollections(self):
+        """
+        Toggle between browsing projects and collections.
+        """
+        tree_rows = self.tree_management.source_model.rowCount()
+        if self.useCollections.checked:
+            self.projectSelectorLabel.setText("Current collection:")
+            self.projectSelector.enabled = False
+            self.projectSelector.visible = False
+            self.groupSelectorLabel.visible = False
+            self.groupSelector.enabled = False
+            self.groupSelector.visible = False
+            self.collectionSelector.enabled = True
+            self.collectionSelector.visible = True
+            collection_id = self.collectionSelector.currentData
+            if collection_id:
+                self.collection = self.fw_client.get(collection_id)
+                # Remove the rows from the tree and repopulate
+                if tree_rows > 0:
+                    self.tree_management.source_model.removeRows(0, tree_rows)
+                self.tree_management.populateTreeFromCollection(self.collection)
+                self.treeView.enabled = True
+            else:
+                self.treeView.enabled = False
+        else:
+            self.projectSelectorLabel.setText("Current project:")
+            self.projectSelector.enabled = True
+            self.projectSelector.visible = True
+            self.groupSelectorLabel.visible = True
+            self.groupSelector.enabled = True
+            self.groupSelector.visible = True
+            self.collectionSelector.enabled = False
+            self.collectionSelector.visible = False
+            project_id = self.projectSelector.currentData
+            if project_id:
+                self.project = self.fw_client.get(project_id)
+                # Remove the rows from the tree and repopulate
+                if tree_rows > 0:
+                    self.tree_management.source_model.removeRows(0, tree_rows)
+                self.tree_management.populateTreeFromProject(self.project)
+                self.treeView.enabled = True
+            else:
+                self.treeView.enabled = False
+
+    def onCollectionSelected(self, item):
+        """
+        On selected collection from dropdown, update the tree
+
+        Args:
+            item (str): Name of collection or empty string
+        """
+        tree_rows = self.tree_management.source_model.rowCount()
+        if item:
+            collection_id = self.collectionSelector.currentData
+            self.collection = self.fw_client.get(collection_id)
+
+            # Remove the rows from the tree and repopulate
+            if tree_rows > 0:
+                self.tree_management.source_model.removeRows(0, tree_rows)
+            self.tree_management.populateTreeFromCollection(self.collection)
+            self.treeView.enabled = True
+        else:
+            self.treeView.enabled = False
+            # Remove the rows from the tree and don't repopulate
+            if tree_rows > 0:
+                self.tree_management.source_model.removeRows(0, tree_rows)
+            self.loadFilesButton.enabled = False
 
     def onGroupSelected(self, item):
         """
@@ -277,7 +410,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         Returns:
             boolean: True for supported compressed dicom type
         """
-        if file_path.endswith(".zip") and file_type=="dicom":
+        if file_path.endswith(".zip") and file_type == "dicom":
             return True
 
         return False
@@ -296,7 +429,9 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             dicom_zip.extractall(path=dicomDataDir)
             DICOMLib.importDicom(dicomDataDir)
             dicomFiles = slicer.util.getFilesInDirectory(dicomDataDir)
-            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists([dicomFiles])
+            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists(
+                [dicomFiles]
+            )
             loadedNodeIDs = DICOMLib.loadLoadables(loadablesByPlugin)
 
     def onLoadFilesPushed(self):
@@ -325,7 +460,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                     print("Not a valid DICOM archive.")
             # Load using Slicer default node reader
             if not slicer.app.ioManager().loadFile(file_path):
-                print("Failed to read file: "+file_path)
+                print("Failed to read file: " + file_path)
 
     def save_analysis(self, parent_container_item, output_path):
         """
@@ -406,7 +541,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         with tempfile.TemporaryDirectory() as tmp_output_path:
             output_path = Path(tmp_output_path)
             slicer.mrmlScene.SetRootDirectory(str(output_path))
-            slicer.mrmlScene.SetURL(str(output_path/"Slicer_Scene.mrml"))
+            slicer.mrmlScene.SetURL(str(output_path / "Slicer_Scene.mrml"))
             if slicer.util.openSaveDataDialog():
                 index = self.treeView.selectedIndexes()[0]
                 container_item = self.tree_management.source_model.itemFromIndex(index)
