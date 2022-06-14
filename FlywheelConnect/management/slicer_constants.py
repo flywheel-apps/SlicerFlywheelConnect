@@ -1,6 +1,9 @@
 # Common paired file types
 PAIRED_FILE_TYPES = {"mhd": "raw", "hdr": "img"}
 
+# TODO: test all major volume and surface file types.
+#       Ensure tests pass for these types.
+#       Other files will be thoroughly tested on customer request for those file types.
 # https://www.slicer.org/wiki/Documentation/4.8/SlicerApplication/SupportedDataFormat
 # https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#supported-data-formats
 SLICER_DATA_FORMATS = {
@@ -35,9 +38,9 @@ SLICER_DATA_FORMATS = {
     ],
     "models": [
         ".vtk",  # vtkPolyData
-        ".vtp",
-        ".stl",
-        ".obj",
+        ".vtp",  # vtkPolyData
+        ".stl",  # StereoLithography
+        ".obj",  # Wavefront
         ".orig",  # FreeSurfer
         ".inflated",  # FreeSurfer
         ".sphere",  # FreeSurfer
