@@ -191,6 +191,7 @@ class CollectionItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/collection.png"
         self.child_container_name = "SESSIONS"
+        # Collections do not have accessible Analyses
         self.has_analyses = False
         super(CollectionItem, self).__init__(parent_item, collection)
         self.collection = self.container
