@@ -2,8 +2,6 @@ import os
 from pathlib import Path
 
 from PythonQt import QtGui
-from PythonQt.QtCore import Qt
-from qt import QAbstractItemView
 
 from .slicer_constants import PAIRED_FILE_TYPES
 
