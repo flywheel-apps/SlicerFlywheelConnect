@@ -81,7 +81,8 @@ class ContainerItem(QtGui.QStandardItem):
             container (flywheel.Container): Flywheel container (e.g. group, project,...)
         """
         super(ContainerItem, self).__init__()
-        self.has_analyses = False
+        if not hasattr(self, "has_analyses"):
+            self.has_analyses = False
         self.parent_item = parent_item
         self.container = container
         self.source_dir = Path(os.path.realpath(__file__)).parents[1]
@@ -122,7 +123,7 @@ class ContainerItem(QtGui.QStandardItem):
         """
         Create "ANALYSES" folder, if container has analyses object.
         """
-        if hasattr(self.container, "analyses"):
+        if hasattr(self.container, "analyses") and self.has_analyses:
             self.analysesItem = AnalysisFolderItem(self)
 
     def _child_container_folder(self):
@@ -190,8 +191,8 @@ class CollectionItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/collection.png"
         self.child_container_name = "SESSIONS"
+        self.has_analyses = False
         super(CollectionItem, self).__init__(parent_item, collection)
-        self.has_analyses = True
         self.collection = self.container
 
     def _list_sessions(self):
@@ -226,8 +227,8 @@ class ProjectItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/project.png"
         self.child_container_name = "SUBJECTS"
-        super(ProjectItem, self).__init__(parent_item, project)
         self.has_analyses = True
+        super(ProjectItem, self).__init__(parent_item, project)
         self.project = self.container
 
     def _list_subjects(self):
@@ -262,8 +263,8 @@ class SubjectItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/subject.png"
         self.child_container_name = "SESSIONS"
-        super(SubjectItem, self).__init__(parent_item, subject)
         self.has_analyses = True
+        super(SubjectItem, self).__init__(parent_item, subject)
         self.subject = self.container
 
     def _list_sessions(self):
@@ -298,8 +299,8 @@ class SessionItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/session.png"
         self.child_container_name = "ACQUISITIONS"
-        super(SessionItem, self).__init__(parent_item, session)
         self.has_analyses = True
+        super(SessionItem, self).__init__(parent_item, session)
         self.session = self.container
 
     def _list_acquisitions(self):
@@ -333,8 +334,8 @@ class AcquisitionItem(ContainerItem):
                 as tree node.
         """
         self.icon_path = "Resources/Icons/acquisition.png"
-        super(AcquisitionItem, self).__init__(parent_item, acquisition)
         self.has_analyses = True
+        super(AcquisitionItem, self).__init__(parent_item, acquisition)
         self.acquisition = self.container
 
 
@@ -396,7 +397,10 @@ class FileItem(ContainerItem):
         file_path = Path(os.path.expanduser("~") + "/flywheelIO/")
 
         for par in ["group", "project", "subject", "session", "acquisition"]:
-            if file_parent.parents[par]:
+            if (
+                not isinstance(self.parent_item.parent(), CollectionItem)
+                and file_parent.parents[par]
+            ):
                 file_path /= file_parent.parents[par]
         file_path /= file_parent.id
         file_path /= self.container.id

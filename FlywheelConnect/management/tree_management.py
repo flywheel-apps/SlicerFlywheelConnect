@@ -140,6 +140,9 @@ class TreeManagement:
                 # Analysis Containers cannot be altered.
                 elif isinstance(item, AnalysisItem):
                     containers_selected = 2
+                # Collection Containers do not yet host Analyses.
+                elif isinstance(item, CollectionItem):
+                    containers_selected = 2
                 elif isinstance(item, ContainerItem):
                     containers_selected += 1
         else:
