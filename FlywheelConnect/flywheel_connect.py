@@ -131,18 +131,6 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         #  collection toggle button
         #
 
-        # TODO: Remove useCollectionCheckBox after review of functionality/look/feel.
-
-        # self.useCollectionCheckBox = qt.QCheckBox("Browse Collections")
-        # self.useCollectionCheckBox.toolTip = (
-        #     """Browse Flywheel Collecions. Otherwise, browse projects."""
-        # )
-
-        # self.useCollectionCheckBox.setCheckState(False)
-        # self.useCollectionCheckBox.setTristate(False)
-
-        # dataFormLayout.addWidget(self.useCollectionCheckBox)
-
         self.radioButtonGroup = qt.QButtonGroup()
         self.useCollections = qt.QRadioButton("Browse Collections")
         self.useProjects = qt.QRadioButton("Browse Groups and Projects")
@@ -157,6 +145,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         #
         # group Selector ComboBox
         #
+
         self.groupSelectorLabel = qt.QLabel("Current group:")
         dataFormLayout.addWidget(self.groupSelectorLabel)
 
