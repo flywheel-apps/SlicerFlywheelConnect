@@ -2,14 +2,9 @@ import os
 from pathlib import Path
 
 from PythonQt import QtGui
-from PythonQt.QtCore import Qt
-from qt import QAbstractItemView
 
-# Common paired file types
-PAIRED_FILE_TYPES = {
-    "mhd": "raw",
-    "hdr": "img"
-}
+from .slicer_constants import PAIRED_FILE_TYPES
+
 
 class FolderItem(QtGui.QStandardItem):
     """
@@ -30,7 +25,7 @@ class FolderItem(QtGui.QStandardItem):
         icon = QtGui.QIcon(str(self.source_dir / icon_path))
         self.parent_item = parent_item
         self.parent_container = parent_item.container
-        self.folderItem = QtGui.QStandardItem()
+        self.folder_item = QtGui.QStandardItem()
         self.setText(folder_name)
         self.setIcon(icon)
         parent_item.appendRow(self)
@@ -84,7 +79,8 @@ class ContainerItem(QtGui.QStandardItem):
             container (flywheel.Container): Flywheel container (e.g. group, project,...)
         """
         super(ContainerItem, self).__init__()
-        self.has_analyses = False
+        if not hasattr(self, "has_analyses"):
+            self.has_analyses = False
         self.parent_item = parent_item
         self.container = container
         self.source_dir = Path(os.path.realpath(__file__)).parents[1]
@@ -125,7 +121,7 @@ class ContainerItem(QtGui.QStandardItem):
         """
         Create "ANALYSES" folder, if container has analyses object.
         """
-        if hasattr(self.container, "analyses"):
+        if hasattr(self.container, "analyses") and self.has_analyses:
             self.analysesItem = AnalysisFolderItem(self)
 
     def _child_container_folder(self):
@@ -133,7 +129,7 @@ class ContainerItem(QtGui.QStandardItem):
         Create a folder with the name of the child containers (e.g. SESSIONS)
         """
         if hasattr(self, "child_container_name"):
-            self.folderItem = FolderItem(self, self.child_container_name)
+            self.folder_item = FolderItem(self, self.child_container_name)
 
     def _on_expand(self):
         """
@@ -165,9 +161,9 @@ class GroupItem(ContainerItem):
         """
         Populate with flywheel projects.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for project in self.group.projects():
-                ProjectItem(self.folderItem, project)
+                ProjectItem(self.folder_item, project)
 
     def _on_expand(self):
         """
@@ -175,6 +171,43 @@ class GroupItem(ContainerItem):
         """
         super(GroupItem, self)._on_expand()
         self._list_projects()
+
+
+class CollectionItem(ContainerItem):
+    """
+    TreeView Node for the functionality of Collection containers.
+    """
+
+    def __init__(self, parent_item, collection):
+        """
+        Initialize Collection Item with parent and collection container.
+
+        Args:
+            parent_item (FolderItem): The folder item tree node that is the parent.
+            collection (flywheel.Collection): Flywheel collection container to attach as
+                tree node.
+        """
+        self.icon_path = "Resources/Icons/collection.png"
+        self.child_container_name = "SESSIONS"
+        # Collections do not have accessible Analyses
+        self.has_analyses = False
+        super(CollectionItem, self).__init__(parent_item, collection)
+        self.collection = self.container
+
+    def _list_sessions(self):
+        """
+        Populate with flywheel sessions.
+        """
+        if not self.folder_item.hasChildren():
+            for session in self.collection.sessions():
+                SessionItem(self.folder_item, session)
+
+    def _on_expand(self):
+        """
+        On expansion of project tree node, list all sessions.
+        """
+        super(CollectionItem, self)._on_expand()
+        self._list_sessions()
 
 
 class ProjectItem(ContainerItem):
@@ -193,17 +226,17 @@ class ProjectItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/project.png"
         self.child_container_name = "SUBJECTS"
-        super(ProjectItem, self).__init__(parent_item, project)
         self.has_analyses = True
+        super(ProjectItem, self).__init__(parent_item, project)
         self.project = self.container
 
     def _list_subjects(self):
         """
         Populate with flywheel subjects.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for subject in self.project.subjects():
-                SubjectItem(self.folderItem, subject)
+                SubjectItem(self.folder_item, subject)
 
     def _on_expand(self):
         """
@@ -229,17 +262,17 @@ class SubjectItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/subject.png"
         self.child_container_name = "SESSIONS"
-        super(SubjectItem, self).__init__(parent_item, subject)
         self.has_analyses = True
+        super(SubjectItem, self).__init__(parent_item, subject)
         self.subject = self.container
 
     def _list_sessions(self):
         """
         Populate with flywheel sessions.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for session in self.subject.sessions():
-                SessionItem(self.folderItem, session)
+                SessionItem(self.folder_item, session)
 
     def _on_expand(self):
         """
@@ -265,17 +298,17 @@ class SessionItem(ContainerItem):
         """
         self.icon_path = "Resources/Icons/session.png"
         self.child_container_name = "ACQUISITIONS"
-        super(SessionItem, self).__init__(parent_item, session)
         self.has_analyses = True
+        super(SessionItem, self).__init__(parent_item, session)
         self.session = self.container
 
     def _list_acquisitions(self):
         """
         Populate with flywheel acquisitions.
         """
-        if not self.folderItem.hasChildren():
+        if not self.folder_item.hasChildren():
             for acquisition in self.session.acquisitions():
-                AcquisitionItem(self.folderItem, acquisition)
+                AcquisitionItem(self.folder_item, acquisition)
 
     def _on_expand(self):
         """
@@ -300,8 +333,8 @@ class AcquisitionItem(ContainerItem):
                 as tree node.
         """
         self.icon_path = "Resources/Icons/acquisition.png"
-        super(AcquisitionItem, self).__init__(parent_item, acquisition)
         self.has_analyses = True
+        super(AcquisitionItem, self).__init__(parent_item, acquisition)
         self.acquisition = self.container
 
 
@@ -339,7 +372,7 @@ class FileItem(ContainerItem):
         file_obj.label = file_obj.name
         self.parent_item = parent_item
         self.container = file_obj
-        
+
         self.file = file_obj
         self.file_type = file_obj.type
         if self._is_cached():
@@ -363,20 +396,28 @@ class FileItem(ContainerItem):
         file_path = Path(os.path.expanduser("~") + "/flywheelIO/")
 
         for par in ["group", "project", "subject", "session", "acquisition"]:
-            if file_parent.parents[par]:
+            if (
+                not isinstance(self.parent_item.parent(), CollectionItem)
+                and file_parent.parents[par]
+            ):
                 file_path /= file_parent.parents[par]
         file_path /= file_parent.id
         file_path /= self.container.id
         file_path /= self.container.name
         return file_path
 
+    # TODO: If this "Paired file" paradigm is not sufficient for most use cases
+    #       we may want to go to a more general method:
+    #       * cache all files to the file_id directory
+    #       * create symlinks in the acquisition_id directory to files
+    #       * update those symlinks when files from new versions are available
     def _is_paired_type(self):
         """
         Determine if this file is of a paired type.
 
         Returns:
             bool: True or False of paired type.
-        """        
+        """
         return self.container.name.split(".")[-1] in PAIRED_FILE_TYPES.keys()
 
     def _get_paired_file(self):
@@ -385,11 +426,11 @@ class FileItem(ContainerItem):
 
         Returns:
             str: Name of paired file
-        """        
+        """
         file_parent = self.parent_item.parent().container
         fl_ext = self.container.name.split(".")[-1]
         paired_ext = PAIRED_FILE_TYPES[fl_ext]
-        paired_file_name = self.container.name[:-len(fl_ext)] + paired_ext
+        paired_file_name = self.container.name[: -len(fl_ext)] + paired_ext
 
         # file definition is retrieved or a None is returned.
         if file_parent.get_file(paired_file_name):
@@ -429,6 +470,8 @@ class FileItem(ContainerItem):
             paired_file_name = self._get_paired_file()
             # if found, download the adjoining pair into original directory
             if paired_file_name:
-                file_parent.download_file(paired_file_name, str(file_path.parents[0]/paired_file_name))
+                file_parent.download_file(
+                    paired_file_name, str(file_path.parents[0] / paired_file_name)
+                )
 
         return file_path, self.file_type

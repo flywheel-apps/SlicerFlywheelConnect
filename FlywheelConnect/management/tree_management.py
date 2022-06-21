@@ -5,6 +5,7 @@ from qt import QAbstractItemView, QItemSelectionModel, QMenu
 from .fw_container_items import (
     AnalysisFolderItem,
     AnalysisItem,
+    CollectionItem,
     ContainerItem,
     FileItem,
     GroupItem,
@@ -71,6 +72,12 @@ class TreeManagement:
         for group in groups:
             group_item = GroupItem(self.source_model, group)
 
+    def populateTreeFromCollection(self, collection):
+        """
+        Populate Tree from a single Collection
+        """
+        collection_item = CollectionItem(self.source_model, collection)
+
     def populateTreeFromProject(self, project):
         """
         Populate Tree from a single Project
@@ -132,6 +139,9 @@ class TreeManagement:
                     has_file = True
                 # Analysis Containers cannot be altered.
                 elif isinstance(item, AnalysisItem):
+                    containers_selected = 2
+                # Collection Containers do not yet host Analyses.
+                elif isinstance(item, CollectionItem):
                     containers_selected = 2
                 elif isinstance(item, ContainerItem):
                     containers_selected += 1
