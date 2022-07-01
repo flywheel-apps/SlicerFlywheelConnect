@@ -1,16 +1,16 @@
-import shutil
 import datetime
 import logging
 import os
 import os.path as op
+import shutil
 import tempfile
 from glob import glob
-from zipfile import ZipFile
 from importlib import import_module
 from pathlib import Path
+from zipfile import ZipFile
 
-import DICOMLib
 import ctk
+import DICOMLib
 import qt
 import slicer
 import vtk
@@ -46,14 +46,18 @@ class flywheel_connect(ScriptedLoadableModule):
         try:
             FlyW = import_module("flywheel")
         except ModuleNotFoundError as e:
-            if slicer.util.confirmOkCancelDisplay("Flywheel Connect requires 'flywheel-sdk' Python package. Click OK to install it now."):
+            if slicer.util.confirmOkCancelDisplay(
+                "Flywheel Connect requires 'flywheel-sdk' Python package. Click OK to install it now."
+            ):
                 slicer.util.pip_install("flywheel-sdk")
                 FlyW = import_module("flywheel")
         globals()["flywheel"] = FlyW
 
+
 #
 # flywheel_connectWidget
 #
+
 
 class flywheel_connectWidget(ScriptedLoadableModuleWidget):
     """Uses ScriptedLoadableModuleWidget base class, available at:
@@ -67,7 +71,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         ScriptedLoadableModuleWidget.setup(self)
 
         # Declare Cache path
-        self.CacheDir = os.path.expanduser("~") + "/flywheelIO/"
+        self.CacheDir = Path(os.path.expanduser("~")) / "flywheelIO"
 
         # #################Declare form elements#######################
 
@@ -279,7 +283,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         Returns:
             boolean: True for supported compressed dicom type
         """
-        if file_path.endswith(".zip") and file_type=="dicom":
+        if file_path.endswith(".zip") and file_type == "dicom":
             return True
 
         return False
@@ -298,7 +302,9 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
             dicom_zip.extractall(path=dicomDataDir)
             DICOMLib.importDicom(dicomDataDir)
             dicomFiles = slicer.util.getFilesInDirectory(dicomDataDir)
-            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists([dicomFiles])
+            loadablesByPlugin, loadEnabled = DICOMLib.getLoadablesFromFileLists(
+                [dicomFiles]
+            )
             loadedNodeIDs = DICOMLib.loadLoadables(loadablesByPlugin)
 
     def onLoadFilesPushed(self):
@@ -327,7 +333,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
                     print("Not a valid DICOM archive.")
             # Load using Slicer default node reader
             if not slicer.app.ioManager().loadFile(file_path):
-                print("Failed to read file: "+file_path)
+                print("Failed to read file: " + file_path)
 
     def save_analysis(self, parent_container_item, output_path):
         """
@@ -408,7 +414,7 @@ class flywheel_connectWidget(ScriptedLoadableModuleWidget):
         with tempfile.TemporaryDirectory() as tmp_output_path:
             output_path = Path(tmp_output_path)
             slicer.mrmlScene.SetRootDirectory(str(output_path))
-            slicer.mrmlScene.SetURL(str(output_path/"Slicer_Scene.mrml"))
+            slicer.mrmlScene.SetURL(str(output_path / "Slicer_Scene.mrml"))
             if slicer.util.openSaveDataDialog():
                 index = self.treeView.selectedIndexes()[0]
                 container_item = self.tree_management.source_model.itemFromIndex(index)
