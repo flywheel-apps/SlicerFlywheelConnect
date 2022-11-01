@@ -1,3 +1,5 @@
+ACTIVE REPO HAS BEEN MOVED TO [https://gitlab.com/flywheel-io/scientific-solutions/app/slicer_flywheel_connect](https://gitlab.com/flywheel-io/scientific-solutions/app/slicer_flywheel_connect)
+
 # flywheel-connect
 
 A 3D Slicer Extension to view, select, and download images from a Flywheel instance to 
